@@ -1,0 +1,6 @@
+package Spotify;
+
+message Toplist {
+    repeated string items = 0x1;
+}
+

@@ -7,6 +7,7 @@ import "C"
 
 import "unsafe" 
 import "encoding/binary"
+import "io"
 //void shn_key (shn_ctx * c, const UCHAR *key, int keylen);
 
 type shnCtx C.shn_ctx
@@ -17,7 +18,7 @@ type ShannonStream struct {
 
     recvNonce uint32
     recvCipher C.shn_ctx
-
+    reader io.Reader
 }
 
 func setKey(ctx *C.shn_ctx, key []uint8) {
@@ -54,6 +55,16 @@ func (s *ShannonStream) Decrypt(messageBytes []byte) []byte{
 		C.int(len(messageBytes)))
 
 	return messageBytes
+}
+
+func (s *ShannonStream) WrapReader(reader io.Reader) {
+	s.reader = reader
+}
+
+func (s *ShannonStream) Read(p []byte) (n int, err error) {
+	n, err = s.reader.Read(p)
+	p = s.Decrypt(p)
+	return n, err
 }
 
 func (s *ShannonStream) FinishSend() []byte{
