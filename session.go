@@ -4,9 +4,9 @@ import (
     "github.com/badfortrains/Spotify"
     "github.com/golang/protobuf/proto"
     "fmt"
-    "encoding/binary"
     "net"
     "log"
+    "bytes"
     "io/ioutil"
     "os"
 )
@@ -14,11 +14,11 @@ import (
 
 type Session struct{
     stream ShannonStream
-
+    mercury MercuryManager
 }
 
 func (s *Session) StartConnection(){
-    tcpCon, err := net.Dial("tcp", "lon3-accesspoint-a26.ap.spotify.com:4070")
+    tcpCon, err := net.Dial("tcp", "sjc1-accesspoint-a95.ap.spotify.com:4070")
     if err != nil {
         log.Fatal("Failed to coonect:", err)
     }
@@ -65,8 +65,8 @@ func (s *Session) StartConnection(){
 }
 
 func (s *Session) Login(){
-    username := os.Getenv('SPOT_USERNAME')
-    password := os.Getenv('SPOT_PASSWORD')
+    username := os.Getenv("SPOT_USERNAME")
+    password := os.Getenv("SPOT_PASSWORD")
 
     loginPacket := loginPacket("./spotify_appkey.key", username, password)
     
@@ -75,19 +75,35 @@ func (s *Session) Login(){
     if err != nil {
         log.Fatal("bad shannon write", err)
     }
+}
 
-    err = s.stream.FinishSend()
+func (s *Session) Poll(mercury *MercuryManager) {
+    cmd, data, err := s.stream.RecvPacket()
     if err != nil {
-        log.Fatal("bad shannon write", err)
+        log.Fatal(err)
     }
-
-
-    var size uint8;
-    err = binary.Read(&s.stream, binary.BigEndian, &size);
-    if err != nil {
-        log.Fatal("bad response packet", err)
+    switch {
+    case cmd == 0x4:
+        err = s.stream.SendPacket(0x49, data)
+        if err != nil {
+            log.Fatal(err)
+        }
+    case cmd == 0x1b:
+        fmt.Println("conuntry")
+    case 0xb2 < cmd && cmd < 0xb6:
+        fmt.Println("mercury")
+        err = mercury.handle(cmd, bytes.NewReader(data))
+        if err != nil {
+            log.Fatal(err)
+        }
+    case cmd == 0xac:
+        fmt.Println("Authentication succeedded")
+        
+    case cmd == 0xad:
+        fmt.Println("Authentication failed")
+    default:
+        fmt.Println("ignore")
     }
-    fmt.Println("got a command", size)
 }
 
 

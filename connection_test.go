@@ -9,6 +9,21 @@ func TestConnection(t *testing.T) {
 	s := Session{}
 	s.StartConnection()
 	s.Login()
+
+
+	mercury := SetupMercury(&s)
+	s.Poll(&mercury)
+
+	username := os.Getenv("SPOT_USERNAME")
+	sController := SetupController(&mercury, username, "7288edd0fc3ffcbe93a0cf06e3568e28521687bc")
+	sController.run()
+
+	for {
+		s.Poll(&mercury)
+	}
+
+
+
 }
 
 // func TestCreateHello(t *testing.T) {

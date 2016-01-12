@@ -4,10 +4,11 @@ package stringutil
 // import "bytes"
 
 // func setupShannon() ShannonStream{
-// 	shannon := ShannonStream{}
-// 	shannon.SetSendKey([]uint8("cool key 123"))
-// 	shannon.SetRecvKey([]uint8("cool key 123"))
-// 	return shannon
+// 	return SetupStream(SharedKeys{
+// 		sendKey: []uint8("cool key 123"),
+// 		recvKey: []uint8("cool key 123"),
+// 		}, PlainConnection{})
+
 // }
 
 // func TestShnKey(t *testing.T) {

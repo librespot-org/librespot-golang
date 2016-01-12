@@ -10,6 +10,7 @@ import(
 	"encoding/binary"
 	"io"
 	"bytes"
+	"log"
 )
 
 type shnCtx C.shn_ctx
@@ -49,6 +50,10 @@ func SetupStream(keys SharedKeys, conn PlainConnection) ShannonStream{
 
 func (s *ShannonStream) SendPacket(cmd uint8, data []byte) (err error){
 	_, err = s.Write(cipherPacket(cmd, data))
+	if err != nil {
+		return
+	}
+	err = s.FinishSend()
 	return 
 }
 
@@ -122,6 +127,55 @@ func (s *ShannonStream) FinishSend() (err error){
 		C.int(len(nonce)))
 
 	_, err = s.writer.Write(mac)
+	return
+}
+
+func (s *ShannonStream) finishRecv() {
+	count := 4
+
+	mac := make([]byte, count)
+	io.ReadFull(s.reader, mac)
+
+	mac2 := make([]byte, count)
+	C.shn_finish(&s.recvCipher,
+		(*C.uchar)(unsafe.Pointer(&mac2[0])),
+		C.int(count))
+
+
+	if !bytes.Equal(mac, mac2) {
+		//log.Fatal("received mac doesn't match")
+		log.Println("received mac doesn't match")
+	}
+
+	s.recvNonce += 1
+	nonce := make([]uint8, 4)
+	binary.BigEndian.PutUint32(nonce, s.recvNonce)
+	C.shn_nonce(&s.recvCipher, 
+		(*C.uchar)(unsafe.Pointer(&nonce[0])), 
+		C.int(len(nonce)))
+}
+
+func (s *ShannonStream) RecvPacket() (cmd uint8, buf []byte, err error){
+	err = binary.Read(s, binary.BigEndian, &cmd)
+	if err != nil {
+		return
+	}
+	var size uint16
+	err = binary.Read(s, binary.BigEndian, &size)
+	if err != nil {
+		return
+	}
+	if size > 0 {
+		buf = make([]byte, size)
+		_, err = io.ReadFull(s.reader, buf)
+		if err != nil {
+			return
+		}
+		buf = s.Decrypt(buf)
+
+	}
+	s.finishRecv()
+	
 	return
 }
 
