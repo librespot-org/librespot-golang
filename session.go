@@ -11,10 +11,23 @@ import (
     "os"
 )
 
+const (
+   SUBSCRIBE = iota
+   REQUEST
+)
+
+type command struct {
+    commandType uint32
+    uri string
+    responseCh chan MercuryResponse
+    request MercuryRequest
+}
 
 type Session struct{
     stream ShannonStream
     mercury MercuryManager
+
+    mercuryCommands chan command
 }
 
 func (s *Session) StartConnection(){
@@ -62,6 +75,8 @@ func (s *Session) StartConnection(){
     }
 
     s.stream = SetupStream(sharedKeys, conn)
+    s.mercury = SetupMercury(s)
+    s.mercuryCommands = make(chan command)
 }
 
 func (s *Session) Login(){
@@ -75,16 +90,69 @@ func (s *Session) Login(){
     if err != nil {
         log.Fatal("bad shannon write", err)
     }
+
+    //poll once for authentication response
+    s.Poll()
 }
 
-func (s *Session) Poll(mercury *MercuryManager) {
-    cmd, data, err := s.stream.RecvPacket()
-    if err != nil {
-        log.Fatal(err)
+type cmdPkt struct{
+    cmd uint8
+    data []byte
+}
+
+func (s *Session) Run() {
+    pktCh := make(chan cmdPkt)
+    done := make(chan int)
+
+    //wrap RecvPacket in a goroutine so we can select on it
+    go func(){
+        for {
+            cmd, data, err := s.stream.RecvPacket()
+            if err != nil {
+                log.Fatal(err)
+            }
+            pktCh <- cmdPkt{cmd, data}
+            <- done
+        }
+    }()
+
+    //Keep all work in this thread
+    go func(){
+        for {
+            select{
+            case pkt := <- pktCh:
+                s.handle(pkt.cmd, pkt.data)
+                done <- 1
+            case command := <- s.mercuryCommands:
+                if command.commandType == SUBSCRIBE {
+                    s.mercury.Subscribe(command.uri, command.responseCh)
+                } else {
+                    s.mercury.request(command.request, command.responseCh)
+                }
+            }
+        }
+    }()
+}
+
+func (s *Session) MercurySubscribe(uri string, responseCh chan MercuryResponse) {
+    s.mercuryCommands <- command{
+        commandType: SUBSCRIBE,
+        uri: uri,
+        responseCh: responseCh,
     }
+}
+
+func (s *Session) MercurySendRequest(request MercuryRequest, responseCh chan MercuryResponse) {
+    s.mercuryCommands <- command{
+        commandType: REQUEST,
+        request: request,
+    }
+}
+
+func (s *Session) handle(cmd uint8, data []byte){
     switch {
     case cmd == 0x4:
-        err = s.stream.SendPacket(0x49, data)
+        err := s.stream.SendPacket(0x49, data)
         if err != nil {
             log.Fatal(err)
         }
@@ -92,7 +160,7 @@ func (s *Session) Poll(mercury *MercuryManager) {
         fmt.Println("conuntry")
     case 0xb2 < cmd && cmd < 0xb6:
         fmt.Println("mercury")
-        err = mercury.handle(cmd, bytes.NewReader(data))
+        err := s.mercury.handle(cmd, bytes.NewReader(data))
         if err != nil {
             log.Fatal(err)
         }
@@ -104,6 +172,14 @@ func (s *Session) Poll(mercury *MercuryManager) {
     default:
         fmt.Println("ignore")
     }
+}
+
+func (s *Session) Poll() {
+    cmd, data, err := s.stream.RecvPacket()
+    if err != nil {
+        log.Fatal(err)
+    }
+    s.handle(cmd, data)
 }
 
 

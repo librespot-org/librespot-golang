@@ -8,7 +8,6 @@ import (
 
 type controller struct{
 	session *Session
-	mercury *MercuryManager
 	seqNr uint32
 	ident string
 	username string
@@ -21,46 +20,45 @@ type connectDevice struct{
 }
 
 
-func SetupController(mercury *MercuryManager, username string, ident string) controller{
+func SetupController(session *Session, username string, ident string) controller{
 	return controller{
 		devices: make(map[string]connectDevice),
-		mercury: mercury,
+		session: session,
 		username: username,
 		ident: ident,
 	}
 }
 
 func (c *controller) run(){
-	ch, _ := c.mercury.Subscribe("hm://remote/3/user/" + c.username + "/")
+	ch := make(chan MercuryResponse)
+	c.session.MercurySubscribe("hm://remote/3/user/" + c.username + "/", ch)
 
-	go func() {
-		for {
-			reponse :=  <- ch
+	for {
+		reponse :=  <- ch
 
-			frame := &Spotify.Frame{}
-			err := proto.Unmarshal(reponse.payload[0], frame)
-			if err != nil {
-				fmt.Println("error getting packet") 
-				continue
-			}
-
-			if frame.GetTyp() == Spotify.MessageType_kMessageTypeHello {
-				c.devices[*frame.Ident] = connectDevice{
-					name: *frame.DeviceState.Name,
-					ident: *frame.Ident,
-				}
-			}
-
-			fmt.Printf("%v %v %v %v %v %v \n",
-				frame.Typ,
-				*frame.DeviceState.Name,
-				*frame.Ident,
-				*frame.SeqNr,
-				*frame.StateUpdateId,
-				frame.Recipient,
-			)
-
+		frame := &Spotify.Frame{}
+		err := proto.Unmarshal(reponse.payload[0], frame)
+		if err != nil {
+			fmt.Println("error getting packet") 
+			continue
 		}
-	}()
+
+		if frame.GetTyp() == Spotify.MessageType_kMessageTypeHello {
+			c.devices[*frame.Ident] = connectDevice{
+				name: *frame.DeviceState.Name,
+				ident: *frame.Ident,
+			}
+		}
+
+		fmt.Printf("%v %v %v %v %v %v \n",
+			frame.Typ,
+			*frame.DeviceState.Name,
+			*frame.Ident,
+			*frame.SeqNr,
+			*frame.StateUpdateId,
+			frame.Recipient,
+		)
+
+	}
 
 }

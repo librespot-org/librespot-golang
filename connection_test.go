@@ -1,6 +1,7 @@
 package stringutil
 
 import "testing"
+import "os"
 // import "github.com/golang/protobuf/proto"
 // import "bytes"
 // import "log"
@@ -9,18 +10,11 @@ func TestConnection(t *testing.T) {
 	s := Session{}
 	s.StartConnection()
 	s.Login()
-
-
-	mercury := SetupMercury(&s)
-	s.Poll(&mercury)
+	s.Run()
 
 	username := os.Getenv("SPOT_USERNAME")
-	sController := SetupController(&mercury, username, "7288edd0fc3ffcbe93a0cf06e3568e28521687bc")
+	sController := SetupController(&s, username, "7288edd0fc3ffcbe93a0cf06e3568e28521687bc")
 	sController.run()
-
-	for {
-		s.Poll(&mercury)
-	}
 
 
 

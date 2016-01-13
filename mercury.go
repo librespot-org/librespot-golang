@@ -32,39 +32,42 @@ type MercuryRequest struct{
 type MercuryPending struct{
     parts [][]byte
     partial []byte
+    result []chan MercuryResponse
 }
 
 type MercuryManager struct{
     nextSeq uint32
     pending map[string]MercuryPending
-    subscriptions map[string]chan MercuryResponse
+    subscriptions map[string][]chan MercuryResponse
     session *Session
 }
 
 func SetupMercury(s *Session) MercuryManager{
     return MercuryManager{
         pending: make(map[string] MercuryPending),
-        subscriptions: make(map[string] chan MercuryResponse),
+        subscriptions: make(map[string][]chan MercuryResponse),
         session: s,
     }
 }
 
-func (m *MercuryManager) Subscribe(uri string) (chan MercuryResponse, error){
-    ch, ok := m.subscriptions[uri]
+func (m *MercuryManager) Subscribe(uri string, recv chan MercuryResponse) (error){
+    chList, ok := m.subscriptions[uri]
     if !ok {
-        ch = make(chan MercuryResponse)
-        m.subscriptions[uri] = ch
+        chList = make([]chan MercuryResponse, 0)
     }
+
+    chList = append(chList, recv)
+    m.subscriptions[uri] = chList
 
     err := m.request(MercuryRequest{
         method: "SUB",
         uri: uri,
-    })
+    }, nil)
 
-    return ch, err
+    return err
 }
 
-func (m *MercuryManager) request(req MercuryRequest) (err error){
+func (m *MercuryManager) request(req MercuryRequest, resultCh chan MercuryResponse) (err error){
     seq := make([]byte, 4)
     binary.BigEndian.PutUint32(seq, m.nextSeq)
     m.nextSeq += 1
@@ -217,9 +220,11 @@ func (m *MercuryManager) completeRequest(cmd uint8, pending MercuryPending) (err
     }
 
     if cmd == 0xb5 {
-        ch, ok := m.subscriptions[*header.Uri]
+        chList, ok := m.subscriptions[*header.Uri]
         if ok {
-            ch <- response
+            for _, ch := range chList {
+                ch <- response
+            }
         }
     } else {
         fmt.Println("send the callback", header.Uri)
