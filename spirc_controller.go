@@ -4,6 +4,7 @@ import (
     "github.com/golang/protobuf/proto"
     "github.com/badfortrains/Spotify"
     "fmt"
+    "log"
 )
 
 type controller struct{
@@ -27,6 +28,36 @@ func SetupController(session *Session, username string, ident string) controller
 		username: username,
 		ident: ident,
 	}
+}
+
+func (c *controller) sendHello(){
+
+}
+
+func (c *controller) sendCmd(recipient []string, messageType Spotify.MessageType) {
+	c.seqNr += 1
+	frame := &Spotify.Frame{
+		Version: proto.Uint32(1),
+		Ident: proto.String(c.ident),
+		ProtocolVersion: proto.String("2.0.0"),
+		SeqNr: proto.Uint32(c.seqNr),
+		Typ: &messageType,
+		Recipient: recipient,
+	}
+
+	frameData, err := proto.Marshal(frame)
+	if err != nil {
+		log.Fatal("could not Marshal request frame")
+	}
+
+	payload := make([][]byte,1)
+	payload[0] = frameData
+
+	c.session.MercurySendRequest(MercuryRequest{
+			method: "SUB",
+			uri: "hm://remote/3/user/" + c.username + "/",
+			payload: payload,
+		}, nil)
 }
 
 func (c *controller) run(){

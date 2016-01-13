@@ -32,7 +32,7 @@ type MercuryRequest struct{
 type MercuryPending struct{
     parts [][]byte
     partial []byte
-    result []chan MercuryResponse
+    callback chan MercuryResponse
 }
 
 type MercuryManager struct{
@@ -226,7 +226,8 @@ func (m *MercuryManager) completeRequest(cmd uint8, pending MercuryPending) (err
                 ch <- response
             }
         }
-    } else {
+    } else if pending.callback != nil {
+        pending.callback <- response
         fmt.Println("send the callback", header.Uri)
     }
     return
