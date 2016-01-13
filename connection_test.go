@@ -1,7 +1,9 @@
-package stringutil
+package librespot
 
 import "testing"
 import "os"
+import "bufio"
+import "fmt"
 // import "github.com/golang/protobuf/proto"
 // import "bytes"
 // import "log"
@@ -14,9 +16,13 @@ func TestConnection(t *testing.T) {
 
 	username := os.Getenv("SPOT_USERNAME")
 	sController := SetupController(&s, username, "7288edd0fc3ffcbe93a0cf06e3568e28521687bc")
-	sController.run()
+	
+	go sController.run()
 
-
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter text: ")
+	text, _ := reader.ReadString('\n')
+	fmt.Println(text)
 
 }
 

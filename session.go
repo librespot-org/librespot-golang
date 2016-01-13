@@ -1,4 +1,4 @@
-package stringutil
+package librespot
 
 import (
     "github.com/badfortrains/Spotify"
@@ -157,20 +157,22 @@ func (s *Session) handle(cmd uint8, data []byte){
             log.Fatal(err)
         }
     case cmd == 0x1b:
-        fmt.Println("conuntry")
     case 0xb2 < cmd && cmd < 0xb6:
-        fmt.Println("mercury")
         err := s.mercury.handle(cmd, bytes.NewReader(data))
         if err != nil {
             log.Fatal(err)
         }
     case cmd == 0xac:
-        fmt.Println("Authentication succeedded")
+        welcome := &Spotify.APWelcome{}
+        err := proto.Unmarshal(data, welcome)
+        if err != nil {
+            log.Fatal(err)
+        }
+        fmt.Println("Authentication succeedded: ", welcome.GetCanonicalUsername())
         
     case cmd == 0xad:
         fmt.Println("Authentication failed")
     default:
-        fmt.Println("ignore")
     }
 }
 
@@ -184,7 +186,10 @@ func (s *Session) Poll() {
 
 
 func loginPacket(appfile string, username string, password string) []byte{
-    data, _ := ioutil.ReadFile(appfile)
+    data, err := ioutil.ReadFile(appfile)
+    if err != nil {
+        log.Fatal("failed to open spotify appkey file")
+    }
     packet := &Spotify.ClientResponseEncrypted{
         LoginCredentials: &Spotify.LoginCredentials{
             Username: proto.String(username),

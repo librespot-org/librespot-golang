@@ -1,5 +1,5 @@
 // Package stringutil contains utility functions for working with strings.
-package stringutil
+package librespot
 
 // #include "./shn.h"
 import "C"

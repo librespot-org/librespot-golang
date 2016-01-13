@@ -1,4 +1,4 @@
-package stringutil
+package librespot
 
 import (
     "math/big"

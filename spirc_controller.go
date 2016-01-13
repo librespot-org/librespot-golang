@@ -1,4 +1,4 @@
-package stringutil
+package librespot
 
 import (
     "github.com/golang/protobuf/proto"
@@ -7,7 +7,7 @@ import (
     "log"
 )
 
-type controller struct{
+type SpircController struct{
 	session *Session
 	seqNr uint32
 	ident string
@@ -16,13 +16,13 @@ type controller struct{
 }
 
 type connectDevice struct{
-    name string
-    ident string
+    Name string
+    Ident string
 }
 
 
-func SetupController(session *Session, username string, ident string) controller{
-	return controller{
+func SetupController(session *Session, username string, ident string) SpircController{
+	return SpircController{
 		devices: make(map[string]connectDevice),
 		session: session,
 		username: username,
@@ -30,11 +30,29 @@ func SetupController(session *Session, username string, ident string) controller
 	}
 }
 
-func (c *controller) sendHello(){
-
+func (c *SpircController) SendHello(){
+	c.sendCmd(nil, Spotify.MessageType_kMessageTypeHello)
 }
 
-func (c *controller) sendCmd(recipient []string, messageType Spotify.MessageType) {
+func (c *SpircController) SendPlay(ident string){
+	c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePlay)
+}
+
+func (c *SpircController) SendPause(ident string){
+
+	c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePause)
+}
+
+func (c *SpircController) ListDevices() []connectDevice{
+	res := make([]connectDevice, 0, len(c.devices))
+	for _, device := range c.devices {
+		res = append(res, device)
+	}
+	return res
+}
+
+
+func (c *SpircController) sendCmd(recipient []string, messageType Spotify.MessageType) {
 	c.seqNr += 1
 	frame := &Spotify.Frame{
 		Version: proto.Uint32(1),
@@ -54,15 +72,15 @@ func (c *controller) sendCmd(recipient []string, messageType Spotify.MessageType
 	payload[0] = frameData
 
 	c.session.MercurySendRequest(MercuryRequest{
-			method: "SUB",
-			uri: "hm://remote/3/user/" + c.username + "/",
+			method: "SEND",
+			uri: "hm://remote/user/" + c.username + "/",
 			payload: payload,
 		}, nil)
 }
 
-func (c *controller) run(){
+func (c *SpircController) Run(){
 	ch := make(chan MercuryResponse)
-	c.session.MercurySubscribe("hm://remote/3/user/" + c.username + "/", ch)
+	c.session.MercurySubscribe("hm://remote/user/" + c.username + "/", ch)
 
 	for {
 		reponse :=  <- ch
@@ -74,19 +92,19 @@ func (c *controller) run(){
 			continue
 		}
 
-		if frame.GetTyp() == Spotify.MessageType_kMessageTypeHello {
+		if frame.GetTyp() == Spotify.MessageType_kMessageTypeNotify{
 			c.devices[*frame.Ident] = connectDevice{
-				name: *frame.DeviceState.Name,
-				ident: *frame.Ident,
+				Name: frame.DeviceState.GetName(),
+				Ident: *frame.Ident,
 			}
 		}
 
 		fmt.Printf("%v %v %v %v %v %v \n",
 			frame.Typ,
-			*frame.DeviceState.Name,
+			frame.DeviceState.GetName(),
 			*frame.Ident,
 			*frame.SeqNr,
-			*frame.StateUpdateId,
+			frame.GetStateUpdateId(),
 			frame.Recipient,
 		)
 
