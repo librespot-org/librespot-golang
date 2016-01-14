@@ -5,7 +5,7 @@ import (
     "encoding/binary"
     "log"
     "github.com/golang/protobuf/proto"
-    "github.com/badfortrains/Spotify"
+    Spotify "github.com/badfortrains/spotcontrol/proto"
     "fmt"
     "bytes"
 )

@@ -1,7 +1,7 @@
 package spotcontrol
 
 import (
-    "github.com/badfortrains/Spotify"
+    Spotify "github.com/badfortrains/spotcontrol/proto"
     "github.com/golang/protobuf/proto"
     "fmt"
     "net"
