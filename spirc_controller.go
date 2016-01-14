@@ -1,4 +1,4 @@
-package librespot
+package spotcontrol
 
 import (
     "github.com/golang/protobuf/proto"
@@ -30,6 +30,33 @@ func SetupController(session *Session, username string, ident string) SpircContr
 	}
 }
 
+func (c *SpircController) LoadTrack(ident string){
+	c.seqNr += 1
+	track := &Spotify.TrackRef{
+		Gid: []byte{128, 249, 190, 174, 75, 15, 78, 138, 191, 123, 159, 34, 37, 255, 102, 194},
+		Queued: proto.Bool(false),
+	}
+
+	state := &Spotify.State{
+		Index: proto.Uint32(0),
+		Track: []*Spotify.TrackRef{track},
+		Status: Spotify.PlayStatus_kPlayStatusStop.Enum(),
+		PlayingTrackIndex: proto.Uint32(0),
+	}
+
+	frame := &Spotify.Frame{
+		Version: proto.Uint32(1),
+		Ident: proto.String(c.ident),
+		ProtocolVersion: proto.String("2.0.0"),
+		SeqNr: proto.Uint32(c.seqNr),
+		Typ: Spotify.MessageType_kMessageTypeLoad.Enum(),
+		Recipient: []string{ident},
+		State: state,
+	}
+
+	c.sendFrame(frame)
+}
+
 func (c *SpircController) SendHello(){
 	c.sendCmd(nil, Spotify.MessageType_kMessageTypeHello)
 }
@@ -51,18 +78,7 @@ func (c *SpircController) ListDevices() []connectDevice{
 	return res
 }
 
-
-func (c *SpircController) sendCmd(recipient []string, messageType Spotify.MessageType) {
-	c.seqNr += 1
-	frame := &Spotify.Frame{
-		Version: proto.Uint32(1),
-		Ident: proto.String(c.ident),
-		ProtocolVersion: proto.String("2.0.0"),
-		SeqNr: proto.Uint32(c.seqNr),
-		Typ: &messageType,
-		Recipient: recipient,
-	}
-
+func (c *SpircController) sendFrame(frame *Spotify.Frame) {
 	frameData, err := proto.Marshal(frame)
 	if err != nil {
 		log.Fatal("could not Marshal request frame")
@@ -76,6 +92,21 @@ func (c *SpircController) sendCmd(recipient []string, messageType Spotify.Messag
 			uri: "hm://remote/user/" + c.username + "/",
 			payload: payload,
 		}, nil)
+}
+
+
+func (c *SpircController) sendCmd(recipient []string, messageType Spotify.MessageType) {
+	c.seqNr += 1
+	frame := &Spotify.Frame{
+		Version: proto.Uint32(1),
+		Ident: proto.String(c.ident),
+		ProtocolVersion: proto.String("2.0.0"),
+		SeqNr: proto.Uint32(c.seqNr),
+		Typ: &messageType,
+		Recipient: recipient,
+	}
+
+	c.sendFrame(frame)
 }
 
 func (c *SpircController) Run(){

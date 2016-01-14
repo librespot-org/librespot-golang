@@ -1,4 +1,4 @@
-package librespot
+package spotcontrol
 
 import (
     "github.com/badfortrains/Spotify"

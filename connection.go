@@ -1,4 +1,4 @@
-package librespot
+package spotcontrol
 
 import (
     "encoding/binary"
