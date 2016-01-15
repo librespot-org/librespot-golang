@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
-	"os"
 )
 
 const (
@@ -79,11 +78,8 @@ func (s *Session) StartConnection() {
 	s.mercuryCommands = make(chan command)
 }
 
-func (s *Session) Login() {
-	username := os.Getenv("SPOT_USERNAME")
-	password := os.Getenv("SPOT_PASSWORD")
-
-	loginPacket := loginPacket("./spotify_appkey.key", username, password)
+func (s *Session) Login(username string, password string, appkeyPath string) {
+	loginPacket := loginPacket(appkeyPath, username, password)
 
 	err := s.stream.SendPacket(0xab, loginPacket)
 	if err != nil {
