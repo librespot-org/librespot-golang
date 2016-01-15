@@ -5,6 +5,7 @@ import (
 	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"github.com/golang/protobuf/proto"
 	"log"
+	"sync"
 )
 
 type SpircController struct {
@@ -13,6 +14,7 @@ type SpircController struct {
 	ident    string
 	username string
 	devices  map[string]connectDevice
+	devicesLock sync.RWMutex
 }
 
 type connectDevice struct {
@@ -29,16 +31,20 @@ func SetupController(session *Session, username string, ident string) SpircContr
 	}
 }
 
-func (c *SpircController) LoadTrack(ident string) {
+func (c *SpircController) LoadTrack(ident string, gids []string) {
 	c.seqNr += 1
-	track := &Spotify.TrackRef{
-		Gid:    []byte{128, 249, 190, 174, 75, 15, 78, 138, 191, 123, 159, 34, 37, 255, 102, 194},
-		Queued: proto.Bool(false),
+
+	tracks := make([]*Spotify.TrackRef,0, len(gids))
+	for _, g := range gids{
+		tracks = append(tracks, &Spotify.TrackRef{
+			Gid: Convert62(g),
+			Queued: proto.Bool(false),
+		})
 	}
 
 	state := &Spotify.State{
 		Index:             proto.Uint32(0),
-		Track:             []*Spotify.TrackRef{track},
+		Track:             tracks,
 		Status:            Spotify.PlayStatus_kPlayStatusStop.Enum(),
 		PlayingTrackIndex: proto.Uint32(0),
 	}
@@ -70,10 +76,12 @@ func (c *SpircController) SendPause(ident string) {
 }
 
 func (c *SpircController) ListDevices() []connectDevice {
+	c.devicesLock.RLock()
 	res := make([]connectDevice, 0, len(c.devices))
 	for _, device := range c.devices {
 		res = append(res, device)
 	}
+	c.devicesLock.RUnlock()
 	return res
 }
 
@@ -122,20 +130,22 @@ func (c *SpircController) Run() {
 		}
 
 		if frame.GetTyp() == Spotify.MessageType_kMessageTypeNotify {
+			c.devicesLock.Lock()
 			c.devices[*frame.Ident] = connectDevice{
 				Name:  frame.DeviceState.GetName(),
 				Ident: *frame.Ident,
 			}
+			c.devicesLock.Unlock()
 		}
 
-		fmt.Printf("%v %v %v %v %v %v \n",
-			frame.Typ,
-			frame.DeviceState.GetName(),
-			*frame.Ident,
-			*frame.SeqNr,
-			frame.GetStateUpdateId(),
-			frame.Recipient,
-		)
+		// fmt.Printf("%v %v %v %v %v %v \n",
+		// 	frame.Typ,
+		// 	frame.DeviceState.GetName(),
+		// 	*frame.Ident,
+		// 	*frame.SeqNr,
+		// 	frame.GetStateUpdateId(),
+		// 	frame.Recipient,
+		// )
 
 	}
 

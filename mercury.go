@@ -7,7 +7,6 @@ import (
 	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"github.com/golang/protobuf/proto"
 	"io"
-	"log"
 )
 
 const (
@@ -176,7 +175,7 @@ func (m *MercuryManager) handle(cmd uint8, reader io.Reader) (err error) {
 	if !ok && cmd == 0xb5 {
 		pending = MercuryPending{}
 	} else if !ok {
-		log.Print("ignoring seq ", seqKey)
+		//log.Print("ignoring seq ", seqKey)
 	}
 
 	for i := uint16(0); i < count; i++ {
