@@ -96,7 +96,7 @@ func (c *SpircController) sendFrame(frame *Spotify.Frame) {
 
 	c.session.MercurySendRequest(MercuryRequest{
 		method:  "SEND",
-		uri:     "hm://remote/user/" + c.username + "/",
+		uri:     "hm://remote/user/" + c.username + "/v23",
 		payload: payload,
 	}, nil)
 }
@@ -117,7 +117,7 @@ func (c *SpircController) sendCmd(recipient []string, messageType Spotify.Messag
 
 func (c *SpircController) Run() {
 	ch := make(chan MercuryResponse)
-	c.session.MercurySubscribe("hm://remote/user/"+c.username+"/", ch)
+	c.session.MercurySubscribe("hm://remote/user/"+c.username+"/v23", ch)
 
 	for {
 		reponse := <-ch
@@ -138,14 +138,14 @@ func (c *SpircController) Run() {
 			c.devicesLock.Unlock()
 		}
 
-		// fmt.Printf("%v %v %v %v %v %v \n",
-		// 	frame.Typ,
-		// 	frame.DeviceState.GetName(),
-		// 	*frame.Ident,
-		// 	*frame.SeqNr,
-		// 	frame.GetStateUpdateId(),
-		// 	frame.Recipient,
-		// )
+		fmt.Printf("%v %v %v %v %v %v \n",
+			frame.Typ,
+			frame.DeviceState.GetName(),
+			*frame.Ident,
+			*frame.SeqNr,
+			frame.GetStateUpdateId(),
+			frame.Recipient,
+		)
 
 	}
 
