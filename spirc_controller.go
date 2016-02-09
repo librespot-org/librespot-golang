@@ -20,9 +20,14 @@ type SpircController struct {
 type connectDevice struct {
 	Name  string
 	Ident string
+	Url string
 }
 
 func SetupController(session *Session, username string, ident string) SpircController {
+	if username == "" && session.discovery.loginBlob.Username != "" {
+		username = session.discovery.loginBlob.Username
+	}
+ 
 	return SpircController{
 		devices:  make(map[string]connectDevice),
 		session:  session,
@@ -75,6 +80,24 @@ func (c *SpircController) SendPause(ident string) {
 	c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePause)
 }
 
+func (c *SpircController) ConnectToDevice(address string) {
+	c.session.discovery.ConnectToDevice(address)
+}
+
+func (c *SpircController) ListMdnsDevices() []connectDevice {
+	discovery := c.session.discovery
+	discovery.devicesLock.RLock()
+	res := make([]connectDevice, 0, len(discovery.devices))
+	for _, device := range discovery.devices {
+		res = append(res, connectDevice{
+				Name: device.name,
+				Url: device.path,
+			})
+	}
+	discovery.devicesLock.RUnlock()
+	return res
+}
+
 func (c *SpircController) ListDevices() []connectDevice {
 	c.devicesLock.RLock()
 	res := make([]connectDevice, 0, len(c.devices))
@@ -82,6 +105,7 @@ func (c *SpircController) ListDevices() []connectDevice {
 		res = append(res, device)
 	}
 	c.devicesLock.RUnlock()
+
 	return res
 }
 
@@ -96,7 +120,7 @@ func (c *SpircController) sendFrame(frame *Spotify.Frame) {
 
 	c.session.MercurySendRequest(MercuryRequest{
 		method:  "SEND",
-		uri:     "hm://remote/user/" + c.username + "/v23",
+		uri:     "hm://remote/user/" + c.username + "/",
 		payload: payload,
 	}, nil)
 }
@@ -118,6 +142,7 @@ func (c *SpircController) sendCmd(recipient []string, messageType Spotify.Messag
 func (c *SpircController) Run() {
 	ch := make(chan MercuryResponse)
 	c.session.MercurySubscribe("hm://remote/user/"+c.username+"/v23", ch)
+	c.session.MercurySubscribe("hm://remote/user/"+c.username+"/", ch)
 
 	for {
 		reponse := <-ch

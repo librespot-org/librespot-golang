@@ -6,6 +6,7 @@ import (
 	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"github.com/golang/protobuf/proto"
 	"io/ioutil"
+	"encoding/base64"
 	"log"
 	"net"
 )
@@ -27,6 +28,7 @@ type Session struct {
 	mercury MercuryManager
 
 	mercuryCommands chan command
+	discovery discovery
 }
 
 func (s *Session) StartConnection() {
@@ -78,16 +80,44 @@ func (s *Session) StartConnection() {
 	s.mercuryCommands = make(chan command)
 }
 
-func (s *Session) Login(username string, password string, appkeyPath string) {
-	loginPacket := loginPacket(appkeyPath, username, password)
-
-	err := s.stream.SendPacket(0xab, loginPacket)
+func (s *Session) doLogin(packet []byte) {
+	err := s.stream.SendPacket(0xab, packet)
 	if err != nil {
 		log.Fatal("bad shannon write", err)
 	}
 
 	//poll once for authentication response
 	s.Poll()
+}
+
+func Login(username string, password string, appkeyPath string) *Session {
+	s := Session{}
+	s.StartConnection()
+	loginPacket := loginPacketPassword(appkeyPath, username, password)
+	s.doLogin(loginPacket)
+	return &s
+}
+
+func LoginDiscovery(cacheBlobPath, appkeyPath string) *Session {
+	discovery := LoginFromConnect(cacheBlobPath);
+	s := Session{
+		discovery: discovery,
+	}
+	s.StartConnection()
+	loginPacket := getLoginBlobPacket(appkeyPath, discovery.loginBlob)
+	s.doLogin(loginPacket)
+	return &s
+}
+
+func LoginBlobFile(cacheBlobPath, appkeyPath string) *Session {
+	discovery := LoginFromFile(cacheBlobPath);
+	s := Session{
+		discovery: discovery,
+	}
+	s.StartConnection()
+	loginPacket := getLoginBlobPacket(appkeyPath, discovery.loginBlob)
+	s.doLogin(loginPacket)
+	return &s
 }
 
 type cmdPkt struct {
@@ -179,7 +209,46 @@ func (s *Session) Poll() {
 	s.handle(cmd, data)
 }
 
-func loginPacket(appfile string, username string, password string) []byte {
+func getLoginBlobPacket(appfile string, blob blobInfo) []byte {
+	data, _ := base64.StdEncoding.DecodeString(blob.DecodedBlob)
+
+	buffer := bytes.NewBuffer(data)
+	buffer.ReadByte()
+	readBytes(buffer)
+	buffer.ReadByte()
+	authNum := readInt(buffer)
+	authType := Spotify.AuthenticationType(authNum)
+	buffer.ReadByte()
+	authData := readBytes(buffer)
+	
+	return loginPacket(appfile, blob.Username, authData, &authType)
+}
+
+func readInt(b *bytes.Buffer) uint32{
+	c, _ := b.ReadByte()
+	lo := uint32(c)
+	if lo & 0x80 == 0 {
+		return lo
+	}
+
+	c2, _ := b.ReadByte()
+	hi := uint32(c2)
+	return lo & 0x7f | hi << 7
+}
+
+func readBytes(b *bytes.Buffer) []byte {
+	length := readInt(b)
+	data := make([]byte, length)
+	b.Read(data)
+
+	return data
+}
+
+func loginPacketPassword(appfile string, username string, password string) []byte{
+	return loginPacket(appfile, username, []byte(password), Spotify.AuthenticationType_AUTHENTICATION_USER_PASS.Enum())
+}
+
+func loginPacket(appfile string, username string, authData []byte, authType *Spotify.AuthenticationType) []byte {
 	data, err := ioutil.ReadFile(appfile)
 	if err != nil {
 		log.Fatal("failed to open spotify appkey file")
@@ -187,8 +256,8 @@ func loginPacket(appfile string, username string, password string) []byte {
 	packet := &Spotify.ClientResponseEncrypted{
 		LoginCredentials: &Spotify.LoginCredentials{
 			Username: proto.String(username),
-			Typ:      Spotify.AuthenticationType_AUTHENTICATION_USER_PASS.Enum(),
-			AuthData: []byte(password),
+			Typ:      authType,
+			AuthData: authData,
 		},
 		SystemInfo: &Spotify.SystemInfo{
 			CpuFamily: Spotify.CpuFamily_CPU_UNKNOWN.Enum(),

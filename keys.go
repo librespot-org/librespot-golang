@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	"log"
 	"math/big"
+	"encoding/base64"
 )
 
 type PrivateKeys struct {
@@ -108,6 +109,16 @@ func (p *PrivateKeys) addRemoteKey(remote []byte, clientPacket []byte, serverPac
 		sendKey:   data[0x14:0x34],
 		recvKey:   data[0x34:0x54],
 	}
+}
+
+func (p* PrivateKeys) SharedKey(publicKey string) []byte {
+	publicKeyBytes, _ := base64.StdEncoding.DecodeString(publicKey)
+
+	publicBig := new(big.Int)
+	publicBig.SetBytes(publicKeyBytes)
+
+	sharedKey := powm(publicBig, p.privateKey, p.prime)
+	return sharedKey.Bytes()
 }
 
 func (p *PrivateKeys) pubKey() []byte {
