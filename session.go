@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"log"
 	"net"
+	"crypto/sha1"
 )
 
 const (
@@ -29,6 +30,8 @@ type Session struct {
 
 	mercuryCommands chan command
 	discovery discovery
+
+	deviceId string
 }
 
 func (s *Session) StartConnection() {
@@ -90,32 +93,44 @@ func (s *Session) doLogin(packet []byte) {
 	s.Poll()
 }
 
+func generateDeviceId(name string) string{
+	hash := sha1.Sum([]byte(name))
+	hash64 := base64.StdEncoding.EncodeToString(hash[:])
+	return hash64
+}
+
 func Login(username string, password string, appkeyPath string) *Session {
-	s := Session{}
+	s := Session{
+		deviceId: generateDeviceId("spotcontrol"),
+	}
 	s.StartConnection()
-	loginPacket := loginPacketPassword(appkeyPath, username, password)
+	loginPacket := loginPacketPassword(appkeyPath, username, password, s.deviceId)
 	s.doLogin(loginPacket)
 	return &s
 }
 
 func LoginDiscovery(cacheBlobPath, appkeyPath string) *Session {
-	discovery := LoginFromConnect(cacheBlobPath);
+	deviceId := generateDeviceId("spotcontrol")
+	discovery := LoginFromConnect(cacheBlobPath, deviceId);
 	s := Session{
 		discovery: discovery,
+		deviceId: deviceId,
 	}
 	s.StartConnection()
-	loginPacket := getLoginBlobPacket(appkeyPath, discovery.loginBlob)
+	loginPacket := s.getLoginBlobPacket(appkeyPath, discovery.loginBlob)
 	s.doLogin(loginPacket)
 	return &s
 }
 
 func LoginBlobFile(cacheBlobPath, appkeyPath string) *Session {
-	discovery := LoginFromFile(cacheBlobPath);
+	deviceId := generateDeviceId("spotcontrol")
+	discovery := LoginFromFile(cacheBlobPath, deviceId);
 	s := Session{
 		discovery: discovery,
+		deviceId: deviceId,
 	}
 	s.StartConnection()
-	loginPacket := getLoginBlobPacket(appkeyPath, discovery.loginBlob)
+	loginPacket := s.getLoginBlobPacket(appkeyPath, discovery.loginBlob)
 	s.doLogin(loginPacket)
 	return &s
 }
@@ -209,7 +224,7 @@ func (s *Session) Poll() {
 	s.handle(cmd, data)
 }
 
-func getLoginBlobPacket(appfile string, blob blobInfo) []byte {
+func (s *Session) getLoginBlobPacket(appfile string, blob blobInfo) []byte {
 	data, _ := base64.StdEncoding.DecodeString(blob.DecodedBlob)
 
 	buffer := bytes.NewBuffer(data)
@@ -221,7 +236,7 @@ func getLoginBlobPacket(appfile string, blob blobInfo) []byte {
 	buffer.ReadByte()
 	authData := readBytes(buffer)
 	
-	return loginPacket(appfile, blob.Username, authData, &authType)
+	return loginPacket(appfile, blob.Username, authData, &authType, s.deviceId)
 }
 
 func readInt(b *bytes.Buffer) uint32{
@@ -244,15 +259,20 @@ func readBytes(b *bytes.Buffer) []byte {
 	return data
 }
 
-func loginPacketPassword(appfile string, username string, password string) []byte{
-	return loginPacket(appfile, username, []byte(password), Spotify.AuthenticationType_AUTHENTICATION_USER_PASS.Enum())
+func loginPacketPassword(appfile, username, password, deviceId string) []byte{
+	return loginPacket(appfile, username, []byte(password),
+		Spotify.AuthenticationType_AUTHENTICATION_USER_PASS.Enum(), deviceId)
 }
 
-func loginPacket(appfile string, username string, authData []byte, authType *Spotify.AuthenticationType) []byte {
+func loginPacket(appfile string, username string, authData []byte,
+	authType *Spotify.AuthenticationType, deviceId string) []byte {
+
 	data, err := ioutil.ReadFile(appfile)
 	if err != nil {
 		log.Fatal("failed to open spotify appkey file")
 	}
+	fmt.Println("do login", deviceId)
+
 	packet := &Spotify.ClientResponseEncrypted{
 		LoginCredentials: &Spotify.LoginCredentials{
 			Username: proto.String(username),
@@ -263,7 +283,7 @@ func loginPacket(appfile string, username string, authData []byte, authType *Spo
 			CpuFamily: Spotify.CpuFamily_CPU_UNKNOWN.Enum(),
 			Os:        Spotify.Os_OS_UNKNOWN.Enum(),
 			SystemInformationString: proto.String("librespot"),
-			DeviceId:                proto.String("7288edd0fc3ffcbe93a0cf06e3568e28521687bc"),
+			DeviceId:                proto.String(deviceId),
 		},
 		VersionString: proto.String("librespot-8315e10"),
 		Appkey: &Spotify.LibspotifyAppKey{

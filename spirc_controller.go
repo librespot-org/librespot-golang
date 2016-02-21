@@ -23,7 +23,7 @@ type connectDevice struct {
 	Url string
 }
 
-func SetupController(session *Session, username string, ident string) SpircController {
+func SetupController(session *Session, username string) SpircController {
 	if username == "" && session.discovery.loginBlob.Username != "" {
 		username = session.discovery.loginBlob.Username
 	}
@@ -32,7 +32,7 @@ func SetupController(session *Session, username string, ident string) SpircContr
 		devices:  make(map[string]connectDevice),
 		session:  session,
 		username: username,
-		ident:    ident,
+		ident:    session.deviceId,
 	}
 }
 

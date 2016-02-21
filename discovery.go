@@ -70,11 +70,11 @@ func makeGetInfo(deviceId, deviceName, publicKey string) getInfo {
 	}
 }
 
-func LoginFromConnect(cachePath string) discovery{
+func LoginFromConnect(cachePath, deviceId string) discovery{
 	d := discovery{
 		keys: GenerateKeys(),
 		cachePath: cachePath,
-		deviceId: "2cc436bd6a996b61866a07c7a6ac3e1511cd1d46",
+		deviceId: deviceId,
 	}
 
 	done := make(chan int)
@@ -87,7 +87,7 @@ func LoginFromConnect(cachePath string) discovery{
 	return d
 }
 
-func LoginFromFile(cachePath string) discovery{
+func LoginFromFile(cachePath, deviceId string) discovery{
 	blob, err := BlobFromFile(cachePath)
 	if err != nil{
 		log.Fatal("failed to get blob from file")
@@ -96,7 +96,7 @@ func LoginFromFile(cachePath string) discovery{
 	d := discovery{
 		keys: GenerateKeys(),
 		cachePath: cachePath,
-		deviceId: "2cc436bd6a996b61866a07c7a6ac3e1511cd1d46",
+		deviceId: deviceId,
 		loginBlob: blob,
 	}
 
@@ -105,13 +105,13 @@ func LoginFromFile(cachePath string) discovery{
 	return d
 }
 
-func makeAddUserRequest(blob string, key string) url.Values{
+func makeAddUserRequest(blob string, key string, deviceId string) url.Values{
 	v := url.Values{}
 	v.Set("action", "addUser")
 	v.Add("userName", "1245584602")
 	v.Add("blob", blob)
 	v.Add("clientKey", key)
-	v.Add("deviceId", "2cc436bd6a996b61866a07c7a6ac3e1511cd1d46")
+	v.Add("deviceId", deviceId)
 	v.Add("deviceName", "shpurcell-macbookair")
 	return v
 }
@@ -174,7 +174,7 @@ func (d *discovery) ConnectToDevice(address string) {
 		panic ("bad blob")
 	}
 
-	body := makeAddUserRequest(blob, client64)
+	body := makeAddUserRequest(blob, client64, d.deviceId)
 	resp, err = http.PostForm(address, body)
 	defer resp.Body.Close()
 	decoder = json.NewDecoder(resp.Body)
