@@ -9,56 +9,49 @@ import (
 	"io"
 )
 
-const (
-	Mercury_GET = iota
-	Mercury_SUB
-	Mercury_UNSUB
-	Mercury_SEND
-)
-
-type MercuryResponse struct {
+type mercuryResponse struct {
 	uri     string
 	payload [][]byte
 }
 
-type MercuryRequest struct {
+type mercuryRequest struct {
 	method      string
 	uri         string
 	contentType string
 	payload     [][]byte
 }
 
-type MercuryPending struct {
+type mercuryPending struct {
 	parts    [][]byte
 	partial  []byte
-	callback chan MercuryResponse
+	callback chan mercuryResponse
 }
 
-type MercuryManager struct {
+type mercuryManager struct {
 	nextSeq       uint32
-	pending       map[string]MercuryPending
-	subscriptions map[string][]chan MercuryResponse
+	pending       map[string]mercuryPending
+	subscriptions map[string][]chan mercuryResponse
 	session       *Session
 }
 
-func SetupMercury(s *Session) MercuryManager {
-	return MercuryManager{
-		pending:       make(map[string]MercuryPending),
-		subscriptions: make(map[string][]chan MercuryResponse),
+func setupMercury(s *Session) mercuryManager {
+	return mercuryManager{
+		pending:       make(map[string]mercuryPending),
+		subscriptions: make(map[string][]chan mercuryResponse),
 		session:       s,
 	}
 }
 
-func (m *MercuryManager) Subscribe(uri string, recv chan MercuryResponse) error {
+func (m *mercuryManager) Subscribe(uri string, recv chan mercuryResponse) error {
 	chList, ok := m.subscriptions[uri]
 	if !ok {
-		chList = make([]chan MercuryResponse, 0)
+		chList = make([]chan mercuryResponse, 0)
 	}
 
 	chList = append(chList, recv)
 	m.subscriptions[uri] = chList
 
-	err := m.request(MercuryRequest{
+	err := m.request(mercuryRequest{
 		method: "SUB",
 		uri:    uri,
 	}, nil)
@@ -66,7 +59,7 @@ func (m *MercuryManager) Subscribe(uri string, recv chan MercuryResponse) error 
 	return err
 }
 
-func (m *MercuryManager) request(req MercuryRequest, resultCh chan MercuryResponse) (err error) {
+func (m *mercuryManager) request(req mercuryRequest, resultCh chan mercuryResponse) (err error) {
 	seq := make([]byte, 4)
 	binary.BigEndian.PutUint32(seq, m.nextSeq)
 	m.nextSeq += 1
@@ -89,7 +82,7 @@ func (m *MercuryManager) request(req MercuryRequest, resultCh chan MercuryRespon
 	return nil
 }
 
-func encodeRequest(seq []byte, req MercuryRequest) ([]byte, error) {
+func encodeRequest(seq []byte, req mercuryRequest) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.BigEndian, uint16(len(seq)))
 	if err != nil {
@@ -142,7 +135,7 @@ func encodeRequest(seq []byte, req MercuryRequest) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (m *MercuryManager) handle(cmd uint8, reader io.Reader) (err error) {
+func (m *mercuryManager) handle(cmd uint8, reader io.Reader) (err error) {
 	var seqLength uint16
 	var flags uint8
 	var count uint16
@@ -173,7 +166,7 @@ func (m *MercuryManager) handle(cmd uint8, reader io.Reader) (err error) {
 	pending, ok := m.pending[seqKey]
 
 	if !ok && cmd == 0xb5 {
-		pending = MercuryPending{}
+		pending = mercuryPending{}
 	} else if !ok {
 		//log.Print("ignoring seq ", seqKey)
 	}
@@ -205,7 +198,7 @@ func (m *MercuryManager) handle(cmd uint8, reader io.Reader) (err error) {
 	return
 }
 
-func (m *MercuryManager) completeRequest(cmd uint8, pending MercuryPending) (err error) {
+func (m *mercuryManager) completeRequest(cmd uint8, pending mercuryPending) (err error) {
 	headerData := pending.parts[0]
 	header := &Spotify.Header{}
 	err = proto.Unmarshal(headerData, header)
@@ -224,7 +217,7 @@ func (m *MercuryManager) completeRequest(cmd uint8, pending MercuryPending) (err
 	// 	}
 	// }
 
-	response := MercuryResponse{
+	response := mercuryResponse{
 		uri:     *header.Uri,
 		payload: pending.parts[1:],
 	}

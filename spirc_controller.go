@@ -23,17 +23,19 @@ type connectDevice struct {
 	Url   string
 }
 
-func SetupController(session *Session, username string) SpircController {
+func SetupController(session *Session, username string) *SpircController {
 	if username == "" && session.discovery.loginBlob.Username != "" {
 		username = session.discovery.loginBlob.Username
 	}
 
-	return SpircController{
+	controller := &SpircController{
 		devices:  make(map[string]connectDevice),
 		session:  session,
 		username: username,
 		ident:    session.deviceId,
 	}
+	go controller.run()
+	return controller
 }
 
 func (c *SpircController) LoadTrack(ident string, gids []string) {
@@ -42,7 +44,7 @@ func (c *SpircController) LoadTrack(ident string, gids []string) {
 	tracks := make([]*Spotify.TrackRef, 0, len(gids))
 	for _, g := range gids {
 		tracks = append(tracks, &Spotify.TrackRef{
-			Gid:    Convert62(g),
+			Gid:    convert62(g),
 			Queued: proto.Bool(false),
 		})
 	}
@@ -118,7 +120,7 @@ func (c *SpircController) sendFrame(frame *Spotify.Frame) {
 	payload := make([][]byte, 1)
 	payload[0] = frameData
 
-	c.session.MercurySendRequest(MercuryRequest{
+	c.session.mercurySendRequest(mercuryRequest{
 		method:  "SEND",
 		uri:     "hm://remote/user/" + c.username + "/",
 		payload: payload,
@@ -139,10 +141,10 @@ func (c *SpircController) sendCmd(recipient []string, messageType Spotify.Messag
 	c.sendFrame(frame)
 }
 
-func (c *SpircController) Run() {
-	ch := make(chan MercuryResponse)
-	c.session.MercurySubscribe("hm://remote/user/"+c.username+"/v23", ch)
-	c.session.MercurySubscribe("hm://remote/user/"+c.username+"/", ch)
+func (c *SpircController) run() {
+	ch := make(chan mercuryResponse)
+	c.session.mercurySubscribe("hm://remote/user/"+c.username+"/v23", ch)
+	c.session.mercurySubscribe("hm://remote/user/"+c.username+"/", ch)
 
 	for {
 		reponse := <-ch

@@ -37,7 +37,7 @@ func (b *blobInfo) saveToFile(path string) error {
 	return nil
 }
 
-func BlobFromFile(path string) (blobInfo, error) {
+func blobFromFile(path string) (blobInfo, error) {
 	result := blobInfo{}
 	file, err := os.Open(path)
 	if err != nil {
@@ -54,8 +54,8 @@ func BlobFromFile(path string) (blobInfo, error) {
 	return result, nil
 }
 
-func NewBlobInfo(blob64 string, client64 string,
-	keys PrivateKeys, deviceId string, username string) (blobInfo, error) {
+func newBlobInfo(blob64 string, client64 string,
+	keys privateKeys, deviceId string, username string) (blobInfo, error) {
 
 	partDecoded, err := decodeBlob(blob64, client64, keys)
 	if err != nil {
@@ -71,7 +71,7 @@ func NewBlobInfo(blob64 string, client64 string,
 	}, nil
 }
 
-func (b *blobInfo) makeAuthBlob(deviceId string, client64 string, dhKeys PrivateKeys) (string, error) {
+func (b *blobInfo) makeAuthBlob(deviceId string, client64 string, dhKeys privateKeys) (string, error) {
 	secret := sha1.Sum([]byte(deviceId))
 	key := blobKey(b.Username, secret[:])
 
@@ -94,7 +94,7 @@ func blobKey(username string, secret []byte) []byte {
 	return append(hash[:], length...)
 }
 
-func makeBlob(blobPart []byte, keys PrivateKeys, publicKey string) string {
+func makeBlob(blobPart []byte, keys privateKeys, publicKey string) string {
 	part := []byte(base64.StdEncoding.EncodeToString(blobPart))
 
 	sharedKey := keys.SharedKey(publicKey)
@@ -149,7 +149,7 @@ func encryptBlob(blob []byte, key []byte) []byte {
 	return encoded
 }
 
-func decodeBlob(blob64 string, client64 string, keys PrivateKeys) (string, error) {
+func decodeBlob(blob64 string, client64 string, keys privateKeys) (string, error) {
 
 	clientKey, err := base64.StdEncoding.DecodeString(client64)
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 	"math/big"
 )
 
-type PrivateKeys struct {
+type privateKeys struct {
 	privateKey *big.Int
 	publicKey  *big.Int
 
@@ -17,7 +17,7 @@ type PrivateKeys struct {
 	prime     *big.Int
 }
 
-type SharedKeys struct {
+type sharedKeys struct {
 	challenge []byte
 	sendKey   []byte
 	recvKey   []byte
@@ -53,14 +53,14 @@ func powm(base, exp, modulus *big.Int) *big.Int {
 	return result
 }
 
-func GenerateKeys() PrivateKeys {
+func generateKeys() privateKeys {
 	private := new(big.Int)
 	private.SetBytes(randomVec(95))
 
 	return generateKeysFromPrivate(private)
 }
 
-func generateKeysFromPrivate(private *big.Int) PrivateKeys {
+func generateKeysFromPrivate(private *big.Int) privateKeys {
 	DH_GENERATOR := big.NewInt(0x2)
 	DH_PRIME := new(big.Int)
 	DH_PRIME.SetBytes([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc9,
@@ -75,7 +75,7 @@ func generateKeysFromPrivate(private *big.Int) PrivateKeys {
 		0x4c, 0x42, 0xe9, 0xa6, 0x3a, 0x36, 0x20, 0xff, 0xff,
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff})
 
-	return PrivateKeys{
+	return privateKeys{
 		privateKey: private,
 		publicKey:  powm(DH_GENERATOR, private, DH_PRIME),
 
@@ -84,7 +84,7 @@ func generateKeysFromPrivate(private *big.Int) PrivateKeys {
 	}
 }
 
-func (p *PrivateKeys) addRemoteKey(remote []byte, clientPacket []byte, serverPacket []byte) SharedKeys {
+func (p *privateKeys) addRemoteKey(remote []byte, clientPacket []byte, serverPacket []byte) sharedKeys {
 	remote_be := new(big.Int)
 	remote_be.SetBytes(remote)
 	shared_key := powm(remote_be, p.privateKey, p.prime)
@@ -104,14 +104,14 @@ func (p *PrivateKeys) addRemoteKey(remote []byte, clientPacket []byte, serverPac
 	mac.Write(clientPacket)
 	mac.Write(serverPacket)
 
-	return SharedKeys{
+	return sharedKeys{
 		challenge: mac.Sum(nil),
 		sendKey:   data[0x14:0x34],
 		recvKey:   data[0x34:0x54],
 	}
 }
 
-func (p *PrivateKeys) SharedKey(publicKey string) []byte {
+func (p *privateKeys) SharedKey(publicKey string) []byte {
 	publicKeyBytes, _ := base64.StdEncoding.DecodeString(publicKey)
 
 	publicBig := new(big.Int)
@@ -121,6 +121,6 @@ func (p *PrivateKeys) SharedKey(publicKey string) []byte {
 	return sharedKey.Bytes()
 }
 
-func (p *PrivateKeys) pubKey() []byte {
+func (p *privateKeys) pubKey() []byte {
 	return p.publicKey.Bytes()
 }

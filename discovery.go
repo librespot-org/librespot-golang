@@ -41,7 +41,7 @@ type getInfo struct {
 }
 
 type discovery struct {
-	keys      PrivateKeys
+	keys      privateKeys
 	cachePath string
 	loginBlob blobInfo
 	deviceId  string
@@ -70,9 +70,9 @@ func makeGetInfo(deviceId, deviceName, publicKey string) getInfo {
 	}
 }
 
-func LoginFromConnect(cachePath, deviceId string) discovery {
+func loginFromConnect(cachePath, deviceId string) discovery {
 	d := discovery{
-		keys:      GenerateKeys(),
+		keys:      generateKeys(),
 		cachePath: cachePath,
 		deviceId:  deviceId,
 	}
@@ -87,14 +87,14 @@ func LoginFromConnect(cachePath, deviceId string) discovery {
 	return d
 }
 
-func LoginFromFile(cachePath, deviceId string) discovery {
-	blob, err := BlobFromFile(cachePath)
+func loginFromFile(cachePath, deviceId string) discovery {
+	blob, err := blobFromFile(cachePath)
 	if err != nil {
 		log.Fatal("failed to get blob from file")
 	}
 
 	d := discovery{
-		keys:      GenerateKeys(),
+		keys:      generateKeys(),
 		cachePath: cachePath,
 		deviceId:  deviceId,
 		loginBlob: blob,
@@ -214,7 +214,7 @@ func (d *discovery) handleAddUser(r *http.Request) error {
 		return errors.New("Bad username request")
 	}
 
-	blob, err := NewBlobInfo(blob64, client64, d.keys,
+	blob, err := newBlobInfo(blob64, client64, d.keys,
 		d.deviceId, username)
 	if err != nil {
 		return errors.New("failed to decode blob")

@@ -14,7 +14,7 @@ import (
 
 type shnCtx C.shn_ctx
 
-type ShannonStream struct {
+type shannonStream struct {
 	sendNonce  uint32
 	sendCipher C.shn_ctx
 
@@ -36,8 +36,8 @@ func setKey(ctx *C.shn_ctx, key []uint8) {
 		C.int(len(nonce)))
 }
 
-func SetupStream(keys SharedKeys, conn PlainConnection) ShannonStream {
-	s := ShannonStream{
+func setupStream(keys sharedKeys, conn plainConnection) shannonStream {
+	s := shannonStream{
 		reader: conn.reader,
 		writer: conn.writer,
 	}
@@ -47,7 +47,7 @@ func SetupStream(keys SharedKeys, conn PlainConnection) ShannonStream {
 	return s
 }
 
-func (s *ShannonStream) SendPacket(cmd uint8, data []byte) (err error) {
+func (s *shannonStream) SendPacket(cmd uint8, data []byte) (err error) {
 	_, err = s.Write(cipherPacket(cmd, data))
 	if err != nil {
 		return
@@ -64,7 +64,7 @@ func cipherPacket(cmd uint8, data []byte) []byte {
 	return buf.Bytes()
 }
 
-func (s *ShannonStream) Encrypt(message string) []byte {
+func (s *shannonStream) Encrypt(message string) []byte {
 	messageBytes := []byte(message)
 	C.shn_encrypt(&s.sendCipher,
 		(*C.uchar)(unsafe.Pointer(&messageBytes[0])),
@@ -73,7 +73,7 @@ func (s *ShannonStream) Encrypt(message string) []byte {
 	return messageBytes
 }
 
-func (s *ShannonStream) EncryptBytes(messageBytes []byte) []byte {
+func (s *shannonStream) EncryptBytes(messageBytes []byte) []byte {
 	C.shn_encrypt(&s.sendCipher,
 		(*C.uchar)(unsafe.Pointer(&messageBytes[0])),
 		C.int(len(messageBytes)))
@@ -81,7 +81,7 @@ func (s *ShannonStream) EncryptBytes(messageBytes []byte) []byte {
 	return messageBytes
 }
 
-func (s *ShannonStream) Decrypt(messageBytes []byte) []byte {
+func (s *shannonStream) Decrypt(messageBytes []byte) []byte {
 	C.shn_decrypt(&s.recvCipher,
 		(*C.uchar)(unsafe.Pointer(&messageBytes[0])),
 		C.int(len(messageBytes)))
@@ -89,26 +89,26 @@ func (s *ShannonStream) Decrypt(messageBytes []byte) []byte {
 	return messageBytes
 }
 
-func (s *ShannonStream) WrapReader(reader io.Reader) {
+func (s *shannonStream) WrapReader(reader io.Reader) {
 	s.reader = reader
 }
 
-func (s *ShannonStream) WrapWriter(writer io.Writer) {
+func (s *shannonStream) WrapWriter(writer io.Writer) {
 	s.writer = writer
 }
 
-func (s *ShannonStream) Read(p []byte) (n int, err error) {
+func (s *shannonStream) Read(p []byte) (n int, err error) {
 	n, err = s.reader.Read(p)
 	p = s.Decrypt(p)
 	return n, err
 }
 
-func (s *ShannonStream) Write(p []byte) (n int, err error) {
+func (s *shannonStream) Write(p []byte) (n int, err error) {
 	p = s.EncryptBytes(p)
 	return s.writer.Write(p)
 }
 
-func (s *ShannonStream) FinishSend() (err error) {
+func (s *shannonStream) FinishSend() (err error) {
 	count := 4
 	mac := make([]byte, count)
 	C.shn_finish(&s.sendCipher,
@@ -126,7 +126,7 @@ func (s *ShannonStream) FinishSend() (err error) {
 	return
 }
 
-func (s *ShannonStream) finishRecv() {
+func (s *shannonStream) finishRecv() {
 	count := 4
 
 	mac := make([]byte, count)
@@ -150,7 +150,7 @@ func (s *ShannonStream) finishRecv() {
 		C.int(len(nonce)))
 }
 
-func (s *ShannonStream) RecvPacket() (cmd uint8, buf []byte, err error) {
+func (s *shannonStream) RecvPacket() (cmd uint8, buf []byte, err error) {
 	err = binary.Read(s, binary.BigEndian, &cmd)
 	if err != nil {
 		return

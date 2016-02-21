@@ -13,20 +13,20 @@ import (
 )
 
 const (
-	SUBSCRIBE = iota
-	REQUEST
+	subscribe_type = iota
+	request_type
 )
 
 type command struct {
 	commandType uint32
 	uri         string
-	responseCh  chan MercuryResponse
-	request     MercuryRequest
+	responseCh  chan mercuryResponse
+	request     mercuryRequest
 }
 
 type Session struct {
-	stream  ShannonStream
-	mercury MercuryManager
+	stream  shannonStream
+	mercury mercuryManager
 
 	mercuryCommands chan command
 	discovery       discovery
@@ -34,14 +34,14 @@ type Session struct {
 	deviceId string
 }
 
-func (s *Session) StartConnection() {
+func (s *Session) startConnection() {
 	tcpCon, err := net.Dial("tcp", "sjc1-accesspoint-a95.ap.spotify.com:4070")
 	if err != nil {
 		log.Fatal("Failed to coonect:", err)
 	}
-	conn := MakePlainConnection(tcpCon, tcpCon)
+	conn := makePlainConnection(tcpCon, tcpCon)
 
-	keys := GenerateKeys()
+	keys := generateKeys()
 	helloMessage := helloPacket(keys.pubKey())
 	initClientPacket, err := conn.SendPrefixPacket([]byte{0, 4}, helloMessage)
 	if err != nil {
@@ -78,8 +78,8 @@ func (s *Session) StartConnection() {
 		log.Fatal("error writing client plain response ", err)
 	}
 
-	s.stream = SetupStream(sharedKeys, conn)
-	s.mercury = SetupMercury(s)
+	s.stream = setupStream(sharedKeys, conn)
+	s.mercury = setupMercury(s)
 	s.mercuryCommands = make(chan command)
 }
 
@@ -90,7 +90,8 @@ func (s *Session) doLogin(packet []byte) {
 	}
 
 	//poll once for authentication response
-	s.Poll()
+	s.poll()
+	s.run()
 }
 
 func generateDeviceId(name string) string {
@@ -103,7 +104,7 @@ func Login(username string, password string, appkeyPath string) *Session {
 	s := Session{
 		deviceId: generateDeviceId("spotcontrol"),
 	}
-	s.StartConnection()
+	s.startConnection()
 	loginPacket := loginPacketPassword(appkeyPath, username, password, s.deviceId)
 	s.doLogin(loginPacket)
 	return &s
@@ -111,12 +112,12 @@ func Login(username string, password string, appkeyPath string) *Session {
 
 func LoginDiscovery(cacheBlobPath, appkeyPath string) *Session {
 	deviceId := generateDeviceId("spotcontrol")
-	discovery := LoginFromConnect(cacheBlobPath, deviceId)
+	discovery := loginFromConnect(cacheBlobPath, deviceId)
 	s := Session{
 		discovery: discovery,
 		deviceId:  deviceId,
 	}
-	s.StartConnection()
+	s.startConnection()
 	loginPacket := s.getLoginBlobPacket(appkeyPath, discovery.loginBlob)
 	s.doLogin(loginPacket)
 	return &s
@@ -124,12 +125,12 @@ func LoginDiscovery(cacheBlobPath, appkeyPath string) *Session {
 
 func LoginBlobFile(cacheBlobPath, appkeyPath string) *Session {
 	deviceId := generateDeviceId("spotcontrol")
-	discovery := LoginFromFile(cacheBlobPath, deviceId)
+	discovery := loginFromFile(cacheBlobPath, deviceId)
 	s := Session{
 		discovery: discovery,
 		deviceId:  deviceId,
 	}
-	s.StartConnection()
+	s.startConnection()
 	loginPacket := s.getLoginBlobPacket(appkeyPath, discovery.loginBlob)
 	s.doLogin(loginPacket)
 	return &s
@@ -140,7 +141,7 @@ type cmdPkt struct {
 	data []byte
 }
 
-func (s *Session) Run() {
+func (s *Session) run() {
 	pktCh := make(chan cmdPkt)
 	done := make(chan int)
 
@@ -164,7 +165,7 @@ func (s *Session) Run() {
 				s.handle(pkt.cmd, pkt.data)
 				done <- 1
 			case command := <-s.mercuryCommands:
-				if command.commandType == SUBSCRIBE {
+				if command.commandType == subscribe_type {
 					s.mercury.Subscribe(command.uri, command.responseCh)
 				} else {
 					s.mercury.request(command.request, command.responseCh)
@@ -174,17 +175,17 @@ func (s *Session) Run() {
 	}()
 }
 
-func (s *Session) MercurySubscribe(uri string, responseCh chan MercuryResponse) {
+func (s *Session) mercurySubscribe(uri string, responseCh chan mercuryResponse) {
 	s.mercuryCommands <- command{
-		commandType: SUBSCRIBE,
+		commandType: subscribe_type,
 		uri:         uri,
 		responseCh:  responseCh,
 	}
 }
 
-func (s *Session) MercurySendRequest(request MercuryRequest, responseCh chan MercuryResponse) {
+func (s *Session) mercurySendRequest(request mercuryRequest, responseCh chan mercuryResponse) {
 	s.mercuryCommands <- command{
-		commandType: REQUEST,
+		commandType: request_type,
 		request:     request,
 	}
 }
@@ -216,7 +217,7 @@ func (s *Session) handle(cmd uint8, data []byte) {
 	}
 }
 
-func (s *Session) Poll() {
+func (s *Session) poll() {
 	cmd, data, err := s.stream.RecvPacket()
 	if err != nil {
 		log.Fatal(err)

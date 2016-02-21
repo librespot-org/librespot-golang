@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-type PlainConnection struct {
+type plainConnection struct {
 	writer io.Writer
 	reader io.Reader
 }
@@ -20,20 +20,20 @@ func makePacketPrefix(prefix []byte, data []byte) []byte {
 	return append(buf, data...)
 }
 
-func MakePlainConnection(reader io.Reader, writer io.Writer) PlainConnection {
-	return PlainConnection{
+func makePlainConnection(reader io.Reader, writer io.Writer) plainConnection {
+	return plainConnection{
 		reader: reader,
 		writer: writer,
 	}
 }
 
-func (p *PlainConnection) SendPrefixPacket(prefix []byte, data []byte) (packet []byte, err error) {
+func (p *plainConnection) SendPrefixPacket(prefix []byte, data []byte) (packet []byte, err error) {
 	packet = makePacketPrefix(prefix, data)
 	_, err = p.writer.Write(packet)
 	return
 }
 
-func (p *PlainConnection) RecvPacket() (buf []byte, err error) {
+func (p *plainConnection) RecvPacket() (buf []byte, err error) {
 	var size uint32
 	err = binary.Read(p.reader, binary.BigEndian, &size)
 	if err != nil {
