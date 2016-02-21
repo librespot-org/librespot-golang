@@ -2,14 +2,14 @@ package spotcontrol
 
 import (
 	"bytes"
+	"crypto/sha1"
+	"encoding/base64"
 	"fmt"
 	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"github.com/golang/protobuf/proto"
 	"io/ioutil"
-	"encoding/base64"
 	"log"
 	"net"
-	"crypto/sha1"
 )
 
 const (
@@ -29,7 +29,7 @@ type Session struct {
 	mercury MercuryManager
 
 	mercuryCommands chan command
-	discovery discovery
+	discovery       discovery
 
 	deviceId string
 }
@@ -93,7 +93,7 @@ func (s *Session) doLogin(packet []byte) {
 	s.Poll()
 }
 
-func generateDeviceId(name string) string{
+func generateDeviceId(name string) string {
 	hash := sha1.Sum([]byte(name))
 	hash64 := base64.StdEncoding.EncodeToString(hash[:])
 	return hash64
@@ -111,10 +111,10 @@ func Login(username string, password string, appkeyPath string) *Session {
 
 func LoginDiscovery(cacheBlobPath, appkeyPath string) *Session {
 	deviceId := generateDeviceId("spotcontrol")
-	discovery := LoginFromConnect(cacheBlobPath, deviceId);
+	discovery := LoginFromConnect(cacheBlobPath, deviceId)
 	s := Session{
 		discovery: discovery,
-		deviceId: deviceId,
+		deviceId:  deviceId,
 	}
 	s.StartConnection()
 	loginPacket := s.getLoginBlobPacket(appkeyPath, discovery.loginBlob)
@@ -124,10 +124,10 @@ func LoginDiscovery(cacheBlobPath, appkeyPath string) *Session {
 
 func LoginBlobFile(cacheBlobPath, appkeyPath string) *Session {
 	deviceId := generateDeviceId("spotcontrol")
-	discovery := LoginFromFile(cacheBlobPath, deviceId);
+	discovery := LoginFromFile(cacheBlobPath, deviceId)
 	s := Session{
 		discovery: discovery,
-		deviceId: deviceId,
+		deviceId:  deviceId,
 	}
 	s.StartConnection()
 	loginPacket := s.getLoginBlobPacket(appkeyPath, discovery.loginBlob)
@@ -235,20 +235,20 @@ func (s *Session) getLoginBlobPacket(appfile string, blob blobInfo) []byte {
 	authType := Spotify.AuthenticationType(authNum)
 	buffer.ReadByte()
 	authData := readBytes(buffer)
-	
+
 	return loginPacket(appfile, blob.Username, authData, &authType, s.deviceId)
 }
 
-func readInt(b *bytes.Buffer) uint32{
+func readInt(b *bytes.Buffer) uint32 {
 	c, _ := b.ReadByte()
 	lo := uint32(c)
-	if lo & 0x80 == 0 {
+	if lo&0x80 == 0 {
 		return lo
 	}
 
 	c2, _ := b.ReadByte()
 	hi := uint32(c2)
-	return lo & 0x7f | hi << 7
+	return lo&0x7f | hi<<7
 }
 
 func readBytes(b *bytes.Buffer) []byte {
@@ -259,7 +259,7 @@ func readBytes(b *bytes.Buffer) []byte {
 	return data
 }
 
-func loginPacketPassword(appfile, username, password, deviceId string) []byte{
+func loginPacketPassword(appfile, username, password, deviceId string) []byte {
 	return loginPacket(appfile, username, []byte(password),
 		Spotify.AuthenticationType_AUTHENTICATION_USER_PASS.Enum(), deviceId)
 }

@@ -9,25 +9,25 @@ import (
 )
 
 type SpircController struct {
-	session  *Session
-	seqNr    uint32
-	ident    string
-	username string
-	devices  map[string]connectDevice
+	session     *Session
+	seqNr       uint32
+	ident       string
+	username    string
+	devices     map[string]connectDevice
 	devicesLock sync.RWMutex
 }
 
 type connectDevice struct {
 	Name  string
 	Ident string
-	Url string
+	Url   string
 }
 
 func SetupController(session *Session, username string) SpircController {
 	if username == "" && session.discovery.loginBlob.Username != "" {
 		username = session.discovery.loginBlob.Username
 	}
- 
+
 	return SpircController{
 		devices:  make(map[string]connectDevice),
 		session:  session,
@@ -39,10 +39,10 @@ func SetupController(session *Session, username string) SpircController {
 func (c *SpircController) LoadTrack(ident string, gids []string) {
 	c.seqNr += 1
 
-	tracks := make([]*Spotify.TrackRef,0, len(gids))
-	for _, g := range gids{
+	tracks := make([]*Spotify.TrackRef, 0, len(gids))
+	for _, g := range gids {
 		tracks = append(tracks, &Spotify.TrackRef{
-			Gid: Convert62(g),
+			Gid:    Convert62(g),
 			Queued: proto.Bool(false),
 		})
 	}
@@ -90,9 +90,9 @@ func (c *SpircController) ListMdnsDevices() []connectDevice {
 	res := make([]connectDevice, 0, len(discovery.devices))
 	for _, device := range discovery.devices {
 		res = append(res, connectDevice{
-				Name: device.name,
-				Url: device.path,
-			})
+			Name: device.name,
+			Url:  device.path,
+		})
 	}
 	discovery.devicesLock.RUnlock()
 	return res

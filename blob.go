@@ -1,29 +1,27 @@
 package spotcontrol
 
 import (
-	"log"
-	"encoding/base64"
-	"encoding/json"
-	"os"
-	"errors"
-	"math/big"
-	"crypto/sha1"
-	"crypto/hmac"
-	"crypto/cipher"
-	"crypto/aes"
-	"encoding/binary"
-	"golang.org/x/crypto/pbkdf2"
 	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/base64"
+	"encoding/binary"
+	"encoding/json"
+	"errors"
+	"golang.org/x/crypto/pbkdf2"
+	"log"
+	"math/big"
+	"os"
 )
 
-
 type blobInfo struct {
-	Username string
+	Username    string
 	DecodedBlob string
 }
 
-
-func (b *blobInfo) saveToFile(path string) error{
+func (b *blobInfo) saveToFile(path string) error {
 	file, err := os.Create(path)
 	if err != nil {
 		return err
@@ -60,20 +58,20 @@ func NewBlobInfo(blob64 string, client64 string,
 	keys PrivateKeys, deviceId string, username string) (blobInfo, error) {
 
 	partDecoded, err := decodeBlob(blob64, client64, keys)
-	if err != nil{
+	if err != nil {
 		return blobInfo{}, err
 	}
 
-	fullDecoded := decodeBlobSecondary(partDecoded, username, 
+	fullDecoded := decodeBlobSecondary(partDecoded, username,
 		deviceId)
 
 	return blobInfo{
-		Username: username,
+		Username:    username,
 		DecodedBlob: base64.StdEncoding.EncodeToString(fullDecoded),
 	}, nil
 }
 
-func (b *blobInfo) makeAuthBlob(deviceId string, client64 string, dhKeys PrivateKeys) (string, error){
+func (b *blobInfo) makeAuthBlob(deviceId string, client64 string, dhKeys PrivateKeys) (string, error) {
 	secret := sha1.Sum([]byte(deviceId))
 	key := blobKey(b.Username, secret[:])
 
@@ -96,7 +94,7 @@ func blobKey(username string, secret []byte) []byte {
 	return append(hash[:], length...)
 }
 
-func makeBlob(blobPart []byte, keys PrivateKeys, publicKey string) string{
+func makeBlob(blobPart []byte, keys PrivateKeys, publicKey string) string {
 	part := []byte(base64.StdEncoding.EncodeToString(blobPart))
 
 	sharedKey := keys.SharedKey(publicKey)
@@ -128,31 +126,31 @@ func makeBlob(blobPart []byte, keys PrivateKeys, publicKey string) string{
 	return base64.StdEncoding.EncodeToString(part)
 }
 
-func encryptBlob(blob []byte, key[]byte) []byte{
+func encryptBlob(blob []byte, key []byte) []byte {
 	block, _ := aes.NewCipher(key)
 	bs := block.BlockSize()
-	if len(blob) % bs != 0 {
-	  panic("Need a multiple of the blocksize")
+	if len(blob)%bs != 0 {
+		panic("Need a multiple of the blocksize")
 	}
 
 	l := len(blob)
 	for i := l - 0x11; i >= 0; i-- {
-		blob[l - i - 1] = blob[l - i - 1] ^ blob[l - i - 0x11]
+		blob[l-i-1] = blob[l-i-1] ^ blob[l-i-0x11]
 	}
 
 	ciphertext := make([]byte, len(blob))
 	encoded := ciphertext
 	for len(blob) > 0 {
-	  block.Encrypt(ciphertext, blob)
-	  ciphertext = ciphertext[bs:]
-	  blob = blob[bs:]
+		block.Encrypt(ciphertext, blob)
+		ciphertext = ciphertext[bs:]
+		blob = blob[bs:]
 	}
 
 	return encoded
 }
 
 func decodeBlob(blob64 string, client64 string, keys PrivateKeys) (string, error) {
-	
+
 	clientKey, err := base64.StdEncoding.DecodeString(client64)
 	if err != nil {
 		return "", err
@@ -168,8 +166,8 @@ func decodeBlob(blob64 string, client64 string, keys PrivateKeys) (string, error
 
 	sharedKey := powm(clientKey_be, keys.privateKey, keys.prime)
 	iv := blobBytes[0:16]
-	encryptedPart := blobBytes[16:len(blobBytes) - 20]
-	ckSum := blobBytes[len(blobBytes) - 20:]
+	encryptedPart := blobBytes[16 : len(blobBytes)-20]
+	ckSum := blobBytes[len(blobBytes)-20:]
 	key := sha1.Sum(sharedKey.Bytes())
 	base_key := key[:16]
 	hash := hmac.New(sha1.New, base_key)
@@ -186,7 +184,7 @@ func decodeBlob(blob64 string, client64 string, keys PrivateKeys) (string, error
 	macHash.Write(encryptedPart)
 	mac := macHash.Sum(nil)
 
-	if !bytes.Equal(mac,ckSum) {
+	if !bytes.Equal(mac, ckSum) {
 		log.Println("add user error, mac doesn't match")
 		return "", errors.New("mac mismatch")
 	}
@@ -198,35 +196,35 @@ func decodeBlob(blob64 string, client64 string, keys PrivateKeys) (string, error
 	return string(encryptedPart), nil
 }
 
-func decodeBlobSecondary(blob64 string, username string, deviceId string) []byte{
+func decodeBlobSecondary(blob64 string, username string, deviceId string) []byte {
 	blob, _ := base64.StdEncoding.DecodeString(blob64)
 	secret := sha1.Sum([]byte(deviceId))
 	key := blobKey(username, secret[:])
 
 	data := decryptBlob(blob, key)
-	return data	
+	return data
 }
 
-func decryptBlob(blob []byte, key []byte) []byte{
+func decryptBlob(blob []byte, key []byte) []byte {
 	block, _ := aes.NewCipher(key)
 	bs := block.BlockSize()
-	if len(blob) % bs != 0 {
-	  panic("Need a multiple of the blocksize")
+	if len(blob)%bs != 0 {
+		panic("Need a multiple of the blocksize")
 	}
 
 	plaintext := make([]byte, len(blob))
 
 	plain := plaintext
 	for len(blob) > 0 {
-	  block.Decrypt(plaintext, blob)
-	  plaintext = plaintext[bs:]
-	  blob = blob[bs:]
+		block.Decrypt(plaintext, blob)
+		plaintext = plaintext[bs:]
+		blob = blob[bs:]
 	}
 
 	l := len(plain)
-	for i := 0; i < l - 0x10; i++ {
-		plain[l - i - 1] = plain[l - i - 1] ^ plain[l - i - 0x11]
+	for i := 0; i < l-0x10; i++ {
+		plain[l-i-1] = plain[l-i-1] ^ plain[l-i-0x11]
 	}
 
-	return plain;
+	return plain
 }

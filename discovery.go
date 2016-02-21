@@ -1,21 +1,21 @@
 package spotcontrol
 
 import (
-	"log"
-	"github.com/hashicorp/mdns"
-	"net/http"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"os"
 	"errors"
+	"fmt"
+	"github.com/hashicorp/mdns"
+	"log"
+	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 )
 
 type connectInfo struct {
-	DeviceID string `json:"deviceID"`
+	DeviceID  string `json:"deviceID"`
 	PublicKey string `json:"publicKey"`
 }
 
@@ -25,56 +25,56 @@ type connectDeviceMdns struct {
 }
 
 type getInfo struct {
-	Status int `json:"status"`
-	StatusError string `json:"statusError"`
-	SpotifyError int `json:"spotifyError"`
-	Version string `json:"version"`
-	DeviceID string `json:"deviceID"`
-	RemoteName string `json:"remoteName"`
-	ActiveUser string `json:"activeUser"`
-	PublicKey string `json:"publicKey"`
-	DeviceType string `json:"deviceType"`
-  LibraryVersion string `json:"libraryVersion"`
-  AccountReq string `json:"accountReq"`
-  BrandDisplayName string `json:"brandDisplayName"`
-  ModelDisplayName string `json:"modelDisplayName"`
+	Status           int    `json:"status"`
+	StatusError      string `json:"statusError"`
+	SpotifyError     int    `json:"spotifyError"`
+	Version          string `json:"version"`
+	DeviceID         string `json:"deviceID"`
+	RemoteName       string `json:"remoteName"`
+	ActiveUser       string `json:"activeUser"`
+	PublicKey        string `json:"publicKey"`
+	DeviceType       string `json:"deviceType"`
+	LibraryVersion   string `json:"libraryVersion"`
+	AccountReq       string `json:"accountReq"`
+	BrandDisplayName string `json:"brandDisplayName"`
+	ModelDisplayName string `json:"modelDisplayName"`
 }
 
 type discovery struct {
-	keys PrivateKeys
+	keys      PrivateKeys
 	cachePath string
 	loginBlob blobInfo
-	deviceId string
+	deviceId  string
 
-	mdnsServer *mdns.Server
-	httpServer *http.Server
-	devices []connectDeviceMdns
+	mdnsServer  *mdns.Server
+	httpServer  *http.Server
+	devices     []connectDeviceMdns
 	devicesLock sync.RWMutex
 }
 
 func makeGetInfo(deviceId, deviceName, publicKey string) getInfo {
 	return getInfo{
-		Status: 101,
-		StatusError: "ERROR-OK",
-		SpotifyError: 0,
-		Version: "1.3.0",
-		DeviceID: deviceId,
-		RemoteName: deviceName,
-		ActiveUser: "",
-		PublicKey: publicKey,
-		DeviceType: "UNKNOWN",
-		LibraryVersion: "0.1.0",
-		AccountReq: "PREMIUM",
+		Status:           101,
+		StatusError:      "ERROR-OK",
+		SpotifyError:     0,
+		Version:          "1.3.0",
+		DeviceID:         deviceId,
+		RemoteName:       deviceName,
+		ActiveUser:       "",
+		PublicKey:        publicKey,
+		DeviceType:       "UNKNOWN",
+		LibraryVersion:   "0.1.0",
+		AccountReq:       "PREMIUM",
 		BrandDisplayName: "librespot",
 		ModelDisplayName: "librespot",
 	}
 }
 
-func LoginFromConnect(cachePath, deviceId string) discovery{
+func LoginFromConnect(cachePath, deviceId string) discovery {
 	d := discovery{
-		keys: GenerateKeys(),
+		keys:      GenerateKeys(),
 		cachePath: cachePath,
-		deviceId: deviceId,
+		deviceId:  deviceId,
 	}
 
 	done := make(chan int)
@@ -82,21 +82,21 @@ func LoginFromConnect(cachePath, deviceId string) discovery{
 	go d.startHttp(done)
 	d.startDiscoverable()
 
-	<- done
+	<-done
 
 	return d
 }
 
-func LoginFromFile(cachePath, deviceId string) discovery{
+func LoginFromFile(cachePath, deviceId string) discovery {
 	blob, err := BlobFromFile(cachePath)
-	if err != nil{
+	if err != nil {
 		log.Fatal("failed to get blob from file")
 	}
 
 	d := discovery{
-		keys: GenerateKeys(),
+		keys:      GenerateKeys(),
 		cachePath: cachePath,
-		deviceId: deviceId,
+		deviceId:  deviceId,
 		loginBlob: blob,
 	}
 
@@ -105,7 +105,7 @@ func LoginFromFile(cachePath, deviceId string) discovery{
 	return d
 }
 
-func makeAddUserRequest(blob string, key string, deviceId string) url.Values{
+func makeAddUserRequest(blob string, key string, deviceId string) url.Values {
 	v := url.Values{}
 	v.Set("action", "addUser")
 	v.Add("userName", "1245584602")
@@ -115,7 +115,6 @@ func makeAddUserRequest(blob string, key string, deviceId string) url.Values{
 	v.Add("deviceName", "shpurcell-macbookair")
 	return v
 }
-
 
 func findCpath(info []string) string {
 	for _, i := range info {
@@ -130,16 +129,16 @@ func (d *discovery) FindDevices() {
 	ch := make(chan *mdns.ServiceEntry, 10)
 
 	d.devices = make([]connectDeviceMdns, 0)
-	go func(){
+	go func() {
 		for entry := range ch {
 			cPath := findCpath(entry.InfoFields)
 			url := fmt.Sprintf("http://%v:%v%v", entry.AddrV4, entry.Port, cPath)
 			fmt.Println("Found a device", entry)
 			d.devicesLock.Lock()
 			d.devices = append(d.devices, connectDeviceMdns{
-					path: url,
-					name: strings.Replace(entry.Name, "._spotify-connect._tcp.local.", "", 1),
-				})
+				path: url,
+				name: strings.Replace(entry.Name, "._spotify-connect._tcp.local.", "", 1),
+			})
 			fmt.Println("devices", d.devices)
 			d.devicesLock.Unlock()
 		}
@@ -161,9 +160,9 @@ func (d *discovery) ConnectToDevice(address string) {
 	defer resp.Body.Close()
 	decoder := json.NewDecoder(resp.Body)
 	info := connectInfo{}
-	err  = decoder.Decode(&info)
+	err = decoder.Decode(&info)
 	if err != nil {
-		panic ("bad json")
+		panic("bad json")
 	}
 	fmt.Println("resposne", resp)
 
@@ -171,7 +170,7 @@ func (d *discovery) ConnectToDevice(address string) {
 	blob, err := d.loginBlob.makeAuthBlob(info.DeviceID,
 		info.PublicKey, d.keys)
 	if err != nil {
-		panic ("bad blob")
+		panic("bad blob")
 	}
 
 	body := makeAddUserRequest(blob, client64, d.deviceId)
@@ -179,12 +178,12 @@ func (d *discovery) ConnectToDevice(address string) {
 	defer resp.Body.Close()
 	decoder = json.NewDecoder(resp.Body)
 	var f interface{}
-	err  = decoder.Decode(&f)
+	err = decoder.Decode(&f)
 
-	fmt.Println("got",f, resp, err)
+	fmt.Println("got", f, resp, err)
 }
 
-func (d *discovery) saveLoginInfo() error{
+func (d *discovery) saveLoginInfo() error {
 	file, err := os.Create(d.cachePath)
 	if err != nil {
 		return err
@@ -200,8 +199,7 @@ func (d *discovery) saveLoginInfo() error{
 	return nil
 }
 
-
-func (d *discovery) handleAddUser(r *http.Request) error{
+func (d *discovery) handleAddUser(r *http.Request) error {
 	//already have login info, ignore
 	if d.loginBlob.Username != "" {
 		return nil
@@ -232,7 +230,6 @@ func (d *discovery) handleAddUser(r *http.Request) error{
 	return nil
 }
 
-
 func (d *discovery) startHttp(done chan int) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		action := r.FormValue("action")
@@ -242,14 +239,14 @@ func (d *discovery) startHttp(done chan int) {
 			client64 := base64.StdEncoding.EncodeToString(d.keys.pubKey())
 			info := makeGetInfo(d.deviceId, "spotcontrol", client64)
 
-		  js, err := json.Marshal(info)
-		  if err != nil {
-		    http.Error(w, err.Error(), http.StatusInternalServerError)
-		    return
-		  }
+			js, err := json.Marshal(info)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 
-		  w.Header().Set("Content-Type", "application/json")
-		  w.Write(js)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(js)
 		case "addUser" == action:
 			err := d.handleAddUser(r)
 			if err == nil {
@@ -268,11 +265,10 @@ func (d *discovery) startDiscoverable() {
 	service, err := mdns.NewMDNSService("spotcontrol189",
 		"_spotify-connect._tcp", "", "", 8080, nil, info)
 	server, err := mdns.NewServer(&mdns.Config{
-		Zone: service, 
+		Zone: service,
 	})
 	if err != nil {
 		log.Fatal("error starting discovery")
 	}
 	d.mdnsServer = server
 }
-

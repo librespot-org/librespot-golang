@@ -4,9 +4,9 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha1"
+	"encoding/base64"
 	"log"
 	"math/big"
-	"encoding/base64"
 )
 
 type PrivateKeys struct {
@@ -111,7 +111,7 @@ func (p *PrivateKeys) addRemoteKey(remote []byte, clientPacket []byte, serverPac
 	}
 }
 
-func (p* PrivateKeys) SharedKey(publicKey string) []byte {
+func (p *PrivateKeys) SharedKey(publicKey string) []byte {
 	publicKeyBytes, _ := base64.StdEncoding.DecodeString(publicKey)
 
 	publicBig := new(big.Int)
