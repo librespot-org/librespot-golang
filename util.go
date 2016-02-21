@@ -1,11 +1,11 @@
 package spotcontrol
 
 import (
-	"strings"
 	"math/big"
+	"strings"
 )
 
-func Convert62 (id string) []byte{
+func Convert62(id string) []byte {
 	digits := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	base := big.NewInt(62)
 

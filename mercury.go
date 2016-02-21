@@ -213,6 +213,17 @@ func (m *MercuryManager) completeRequest(cmd uint8, pending MercuryPending) (err
 		return err
 	}
 
+	// fmt.Println("cmd", cmd)
+	// fmt.Println("response", *header.Uri)
+
+	// for _, part := range pending.parts[1:] {
+	// 	sub := &Spotify.Subscription{}
+	// 	err = proto.Unmarshal(part, sub)
+	// 	if err == nil {
+	// 		fmt.Println("sub", sub)
+	// 	}
+	// }
+
 	response := MercuryResponse{
 		uri:     *header.Uri,
 		payload: pending.parts[1:],
