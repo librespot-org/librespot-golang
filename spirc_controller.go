@@ -28,7 +28,7 @@ type ConnectDevice struct {
 
 // Starts controller.  Registers listeners for Spotify connect device
 // updates, and opens connection for sending commands
-func SetupController(session *Session, username string) *SpircController {
+func setupController(session *Session, username string) *SpircController {
 	if username == "" && session.discovery.loginBlob.Username != "" {
 		username = session.discovery.loginBlob.Username
 	}
@@ -40,6 +40,7 @@ func SetupController(session *Session, username string) *SpircController {
 		ident:    session.deviceId,
 	}
 	go controller.run()
+	controller.SendHello()
 	return controller
 }
 

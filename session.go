@@ -87,7 +87,7 @@ func (s *Session) startConnection() {
 	s.mercuryCommands = make(chan command)
 }
 
-func (s *Session) doLogin(packet []byte) {
+func (s *Session) doLogin(packet []byte, username string) *SpircController{
 	err := s.stream.SendPacket(0xab, packet)
 	if err != nil {
 		log.Fatal("bad shannon write", err)
@@ -96,6 +96,8 @@ func (s *Session) doLogin(packet []byte) {
 	//poll once for authentication response
 	s.poll()
 	s.run()
+
+	return setupController(s, username)
 }
 
 func generateDeviceId(name string) string {
@@ -105,14 +107,13 @@ func generateDeviceId(name string) string {
 }
 
 //Login to spotify using username, password and app key file.
-func Login(username string, password string, appkeyPath string) *Session {
+func Login(username string, password string, appkeyPath string) *SpircController {
 	s := Session{
 		deviceId: generateDeviceId("spotcontrol"),
 	}
 	s.startConnection()
 	loginPacket := loginPacketPassword(appkeyPath, username, password, s.deviceId)
-	s.doLogin(loginPacket)
-	return &s
+	return s.doLogin(loginPacket, username)
 }
 
 //Registers spotcontrol as a spotify conenct device via mdns.
@@ -120,7 +121,7 @@ func Login(username string, password string, appkeyPath string) *Session {
 //in file at cacheBlobPath. 
 //Once saved, the blob credentials allow the program 
 //to connect to other spotify connect devices and control them.
-func LoginDiscovery(cacheBlobPath, appkeyPath string) *Session {
+func LoginDiscovery(cacheBlobPath, appkeyPath string) *SpircController {
 	deviceId := generateDeviceId("spotcontrol")
 	discovery := loginFromConnect(cacheBlobPath, deviceId)
 	s := Session{
@@ -129,13 +130,12 @@ func LoginDiscovery(cacheBlobPath, appkeyPath string) *Session {
 	}
 	s.startConnection()
 	loginPacket := s.getLoginBlobPacket(appkeyPath, discovery.loginBlob)
-	s.doLogin(loginPacket)
-	return &s
+	return s.doLogin(loginPacket, discovery.loginBlob.Username)
 }
 
 //Login from credentials at cacheBlobPath previously saved 
 //by LoginDiscovery.
-func LoginBlobFile(cacheBlobPath, appkeyPath string) *Session {
+func LoginBlobFile(cacheBlobPath, appkeyPath string) *SpircController {
 	deviceId := generateDeviceId("spotcontrol")
 	discovery := loginFromFile(cacheBlobPath, deviceId)
 	s := Session{
@@ -144,8 +144,7 @@ func LoginBlobFile(cacheBlobPath, appkeyPath string) *Session {
 	}
 	s.startConnection()
 	loginPacket := s.getLoginBlobPacket(appkeyPath, discovery.loginBlob)
-	s.doLogin(loginPacket)
-	return &s
+	return s.doLogin(loginPacket, discovery.loginBlob.Username)
 }
 
 type cmdPkt struct {
