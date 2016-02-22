@@ -162,7 +162,6 @@ func (c *SpircController) sendCmd(recipient []string, messageType Spotify.Messag
 
 func (c *SpircController) run() {
 	ch := make(chan mercuryResponse)
-	c.session.mercurySubscribe("hm://remote/user/"+c.username+"/v23", ch)
 	c.session.mercurySubscribe("hm://remote/user/"+c.username+"/", ch)
 
 	for {

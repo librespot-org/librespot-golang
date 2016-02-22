@@ -21,10 +21,12 @@ type mercuryRequest struct {
 	payload     [][]byte
 }
 
+type responseCallback func(mercuryResponse)
+
 type mercuryPending struct {
 	parts    [][]byte
 	partial  []byte
-	callback chan mercuryResponse
+	callback responseCallback
 }
 
 type mercuryManager struct {
@@ -42,7 +44,7 @@ func setupMercury(s *Session) mercuryManager {
 	}
 }
 
-func (m *mercuryManager) Subscribe(uri string, recv chan mercuryResponse) error {
+func (m *mercuryManager) addChanelSubscriber(uri string, recv chan mercuryResponse) {
 	chList, ok := m.subscriptions[uri]
 	if !ok {
 		chList = make([]chan mercuryResponse, 0)
@@ -50,16 +52,27 @@ func (m *mercuryManager) Subscribe(uri string, recv chan mercuryResponse) error 
 
 	chList = append(chList, recv)
 	m.subscriptions[uri] = chList
+}
 
+func (m *mercuryManager) Subscribe(uri string, recv chan mercuryResponse) error {
+	m.addChanelSubscriber(uri, recv)
 	err := m.request(mercuryRequest{
 		method: "SUB",
 		uri:    uri,
-	}, nil)
+	}, func(response mercuryResponse) {
+		for _, part := range response.payload {
+			sub := &Spotify.Subscription{}
+			err := proto.Unmarshal(part, sub)
+			if err == nil && *sub.Uri != uri {
+				m.addChanelSubscriber(*sub.Uri, recv)
+			}
+		}
+	})
 
 	return err
 }
 
-func (m *mercuryManager) request(req mercuryRequest, resultCh chan mercuryResponse) (err error) {
+func (m *mercuryManager) request(req mercuryRequest, cb responseCallback) (err error) {
 	seq := make([]byte, 4)
 	binary.BigEndian.PutUint32(seq, m.nextSeq)
 	m.nextSeq += 1
@@ -79,6 +92,11 @@ func (m *mercuryManager) request(req mercuryRequest, resultCh chan mercuryRespon
 	}
 
 	m.session.stream.SendPacket(cmd, data)
+
+	m.pending[string(seq)] = mercuryPending{
+		callback: cb,
+	}
+
 	return nil
 }
 
@@ -206,17 +224,6 @@ func (m *mercuryManager) completeRequest(cmd uint8, pending mercuryPending) (err
 		return err
 	}
 
-	// fmt.Println("cmd", cmd)
-	// fmt.Println("response", *header.Uri)
-
-	// for _, part := range pending.parts[1:] {
-	// 	sub := &Spotify.Subscription{}
-	// 	err = proto.Unmarshal(part, sub)
-	// 	if err == nil {
-	// 		fmt.Println("sub", sub)
-	// 	}
-	// }
-
 	response := mercuryResponse{
 		uri:     *header.Uri,
 		payload: pending.parts[1:],
@@ -230,8 +237,7 @@ func (m *mercuryManager) completeRequest(cmd uint8, pending mercuryPending) (err
 			}
 		}
 	} else if pending.callback != nil {
-		pending.callback <- response
-		fmt.Println("send the callback", header.Uri)
+		pending.callback(response)
 	}
 	return
 

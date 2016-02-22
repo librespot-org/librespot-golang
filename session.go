@@ -23,6 +23,7 @@ type command struct {
 	commandType uint32
 	uri         string
 	responseCh  chan mercuryResponse
+	responseCb  responseCallback
 	request     mercuryRequest
 }
 
@@ -179,7 +180,7 @@ func (s *Session) run() {
 				if command.commandType == subscribe_type {
 					s.mercury.Subscribe(command.uri, command.responseCh)
 				} else {
-					s.mercury.request(command.request, command.responseCh)
+					s.mercury.request(command.request, command.responseCb)
 				}
 			}
 		}
@@ -194,10 +195,11 @@ func (s *Session) mercurySubscribe(uri string, responseCh chan mercuryResponse) 
 	}
 }
 
-func (s *Session) mercurySendRequest(request mercuryRequest, responseCh chan mercuryResponse) {
+func (s *Session) mercurySendRequest(request mercuryRequest, responseCb responseCallback) {
 	s.mercuryCommands <- command{
 		commandType: request_type,
 		request:     request,
+		responseCb:  responseCb,
 	}
 }
 
