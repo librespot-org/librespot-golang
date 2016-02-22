@@ -9,7 +9,7 @@ import (
 )
 
 type SpircController struct {
-	session     *Session
+	session     *session
 	seqNr       uint32
 	ident       string
 	username    string
@@ -28,16 +28,17 @@ type ConnectDevice struct {
 
 // Starts controller.  Registers listeners for Spotify connect device
 // updates, and opens connection for sending commands
-func setupController(session *Session, username string) *SpircController {
-	if username == "" && session.discovery.loginBlob.Username != "" {
-		username = session.discovery.loginBlob.Username
+func setupController(userSession *session, username string) *SpircController {
+	if username == "" &&
+		userSession.discovery.loginBlob.Username != "" {
+		username = userSession.discovery.loginBlob.Username
 	}
 
 	controller := &SpircController{
 		devices:  make(map[string]ConnectDevice),
-		session:  session,
+		session:  userSession,
 		username: username,
-		ident:    session.deviceId,
+		ident:    userSession.deviceId,
 	}
 	go controller.run()
 	controller.SendHello()
@@ -77,7 +78,7 @@ func (c *SpircController) LoadTrack(ident string, gids []string) {
 	c.sendFrame(frame)
 }
 
-// Sends a 'hello' command to all spotify connect devices. 
+// Sends a 'hello' command to all spotify connect devices.
 // Active devices will respond with a 'notify' updating
 // their state.
 func (c *SpircController) SendHello() {
@@ -103,7 +104,7 @@ func (c *SpircController) ConnectToDevice(address string) {
 	c.session.discovery.ConnectToDevice(address)
 }
 
-// Lists devices on local network advertising spotify connect 
+// Lists devices on local network advertising spotify connect
 // service (_spotify-connect._tcp.).
 func (c *SpircController) ListMdnsDevices() []ConnectDevice {
 	discovery := c.session.discovery

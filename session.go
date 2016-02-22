@@ -1,5 +1,5 @@
-// Package spotcontol contains functions to remotely 
-// control spotify connect devices. 
+// Package spotcontol contains functions to remotely
+// control spotify connect devices.
 package spotcontrol
 
 import (
@@ -28,7 +28,7 @@ type command struct {
 }
 
 //Represents an active authenticated spotify connection
-type Session struct {
+type session struct {
 	stream  shannonStream
 	mercury mercuryManager
 
@@ -38,7 +38,7 @@ type Session struct {
 	deviceId string
 }
 
-func (s *Session) startConnection() {
+func (s *session) startConnection() {
 	tcpCon, err := net.Dial("tcp", "sjc1-accesspoint-a95.ap.spotify.com:4070")
 	if err != nil {
 		log.Fatal("Failed to coonect:", err)
@@ -87,7 +87,7 @@ func (s *Session) startConnection() {
 	s.mercuryCommands = make(chan command)
 }
 
-func (s *Session) doLogin(packet []byte, username string) *SpircController{
+func (s *session) doLogin(packet []byte, username string) *SpircController {
 	err := s.stream.SendPacket(0xab, packet)
 	if err != nil {
 		log.Fatal("bad shannon write", err)
@@ -108,7 +108,7 @@ func generateDeviceId(name string) string {
 
 //Login to spotify using username, password and app key file.
 func Login(username string, password string, appkeyPath string) *SpircController {
-	s := Session{
+	s := session{
 		deviceId: generateDeviceId("spotcontrol"),
 	}
 	s.startConnection()
@@ -118,13 +118,13 @@ func Login(username string, password string, appkeyPath string) *SpircController
 
 //Registers spotcontrol as a spotify conenct device via mdns.
 //When user connects, logs on to spotify and saves credentials
-//in file at cacheBlobPath. 
-//Once saved, the blob credentials allow the program 
+//in file at cacheBlobPath.
+//Once saved, the blob credentials allow the program
 //to connect to other spotify connect devices and control them.
 func LoginDiscovery(cacheBlobPath, appkeyPath string) *SpircController {
 	deviceId := generateDeviceId("spotcontrol")
 	discovery := loginFromConnect(cacheBlobPath, deviceId)
-	s := Session{
+	s := session{
 		discovery: discovery,
 		deviceId:  deviceId,
 	}
@@ -133,12 +133,12 @@ func LoginDiscovery(cacheBlobPath, appkeyPath string) *SpircController {
 	return s.doLogin(loginPacket, discovery.loginBlob.Username)
 }
 
-//Login from credentials at cacheBlobPath previously saved 
+//Login from credentials at cacheBlobPath previously saved
 //by LoginDiscovery.
 func LoginBlobFile(cacheBlobPath, appkeyPath string) *SpircController {
 	deviceId := generateDeviceId("spotcontrol")
 	discovery := loginFromFile(cacheBlobPath, deviceId)
-	s := Session{
+	s := session{
 		discovery: discovery,
 		deviceId:  deviceId,
 	}
@@ -152,7 +152,7 @@ type cmdPkt struct {
 	data []byte
 }
 
-func (s *Session) run() {
+func (s *session) run() {
 	pktCh := make(chan cmdPkt)
 	done := make(chan int)
 
@@ -186,7 +186,7 @@ func (s *Session) run() {
 	}()
 }
 
-func (s *Session) mercurySubscribe(uri string, responseCh chan mercuryResponse) {
+func (s *session) mercurySubscribe(uri string, responseCh chan mercuryResponse) {
 	s.mercuryCommands <- command{
 		commandType: subscribe_type,
 		uri:         uri,
@@ -194,7 +194,7 @@ func (s *Session) mercurySubscribe(uri string, responseCh chan mercuryResponse) 
 	}
 }
 
-func (s *Session) mercurySendRequest(request mercuryRequest, responseCb responseCallback) {
+func (s *session) mercurySendRequest(request mercuryRequest, responseCb responseCallback) {
 	s.mercuryCommands <- command{
 		commandType: request_type,
 		request:     request,
@@ -202,7 +202,7 @@ func (s *Session) mercurySendRequest(request mercuryRequest, responseCb response
 	}
 }
 
-func (s *Session) handle(cmd uint8, data []byte) {
+func (s *session) handle(cmd uint8, data []byte) {
 	switch {
 	case cmd == 0x4:
 		err := s.stream.SendPacket(0x49, data)
@@ -229,7 +229,7 @@ func (s *Session) handle(cmd uint8, data []byte) {
 	}
 }
 
-func (s *Session) poll() {
+func (s *session) poll() {
 	cmd, data, err := s.stream.RecvPacket()
 	if err != nil {
 		log.Fatal(err)
@@ -237,7 +237,7 @@ func (s *Session) poll() {
 	s.handle(cmd, data)
 }
 
-func (s *Session) getLoginBlobPacket(appfile string, blob blobInfo) []byte {
+func (s *session) getLoginBlobPacket(appfile string, blob blobInfo) []byte {
 	data, _ := base64.StdEncoding.DecodeString(blob.DecodedBlob)
 
 	buffer := bytes.NewBuffer(data)

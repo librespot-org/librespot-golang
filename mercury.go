@@ -33,10 +33,10 @@ type mercuryManager struct {
 	nextSeq       uint32
 	pending       map[string]mercuryPending
 	subscriptions map[string][]chan mercuryResponse
-	session       *Session
+	session       *session
 }
 
-func setupMercury(s *Session) mercuryManager {
+func setupMercury(s *session) mercuryManager {
 	return mercuryManager{
 		pending:       make(map[string]mercuryPending),
 		subscriptions: make(map[string][]chan mercuryResponse),
