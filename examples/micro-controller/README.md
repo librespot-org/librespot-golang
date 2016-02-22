@@ -3,6 +3,12 @@
 Provides very basic (and incomplete) command line interface for controlling spotify connect devices.  
 Currently supports loading tracks, playing and pausing.
 
+##Install
+In this directory, build with
+````
+go build
+````
+
 ##usage
 ````
 //in micro-controller directory
