@@ -1,3 +1,5 @@
+// Package spotcontol contains functions to remotely 
+// control spotify connect devices. 
 package spotcontrol
 
 import (
@@ -24,6 +26,7 @@ type command struct {
 	request     mercuryRequest
 }
 
+//Represents an active authenticated spotify connection
 type Session struct {
 	stream  shannonStream
 	mercury mercuryManager
@@ -100,6 +103,7 @@ func generateDeviceId(name string) string {
 	return hash64
 }
 
+//Login to spotify using username, password and app key file.
 func Login(username string, password string, appkeyPath string) *Session {
 	s := Session{
 		deviceId: generateDeviceId("spotcontrol"),
@@ -110,6 +114,11 @@ func Login(username string, password string, appkeyPath string) *Session {
 	return &s
 }
 
+//Registers spotcontrol as a spotify conenct device via mdns.
+//When user connects, logs on to spotify and saves credentials
+//in file at cacheBlobPath. 
+//Once saved, the blob credentials allow the program 
+//to connect to other spotify connect devices and control them.
 func LoginDiscovery(cacheBlobPath, appkeyPath string) *Session {
 	deviceId := generateDeviceId("spotcontrol")
 	discovery := loginFromConnect(cacheBlobPath, deviceId)
@@ -123,6 +132,8 @@ func LoginDiscovery(cacheBlobPath, appkeyPath string) *Session {
 	return &s
 }
 
+//Login from credentials at cacheBlobPath previously saved 
+//by LoginDiscovery.
 func LoginBlobFile(cacheBlobPath, appkeyPath string) *Session {
 	deviceId := generateDeviceId("spotcontrol")
 	discovery := loginFromFile(cacheBlobPath, deviceId)

@@ -13,23 +13,28 @@ type SpircController struct {
 	seqNr       uint32
 	ident       string
 	username    string
-	devices     map[string]connectDevice
+	devices     map[string]ConnectDevice
 	devicesLock sync.RWMutex
 }
 
-type connectDevice struct {
+// Represents an available spotify connect device.
+// For mdns devices not yet authenitcated, Ident will be ""
+// and Url will be the address to pass to ConnectToDevie.
+type ConnectDevice struct {
 	Name  string
 	Ident string
 	Url   string
 }
 
+// Starts controller.  Registers listeners for Spotify connect device
+// updates, and opens connection for sending commands
 func SetupController(session *Session, username string) *SpircController {
 	if username == "" && session.discovery.loginBlob.Username != "" {
 		username = session.discovery.loginBlob.Username
 	}
 
 	controller := &SpircController{
-		devices:  make(map[string]connectDevice),
+		devices:  make(map[string]ConnectDevice),
 		session:  session,
 		username: username,
 		ident:    session.deviceId,
@@ -38,6 +43,8 @@ func SetupController(session *Session, username string) *SpircController {
 	return controller
 }
 
+// Load given list of tracks on spotify connect device with given
+// ident.  Gids are formated base62 spotify ids.
 func (c *SpircController) LoadTrack(ident string, gids []string) {
 	c.seqNr += 1
 
@@ -69,29 +76,40 @@ func (c *SpircController) LoadTrack(ident string, gids []string) {
 	c.sendFrame(frame)
 }
 
+// Sends a 'hello' command to all spotify connect devices. 
+// Active devices will respond with a 'notify' updating
+// their state.
 func (c *SpircController) SendHello() {
 	c.sendCmd(nil, Spotify.MessageType_kMessageTypeHello)
 }
 
+// Sends a 'play' command to spotify connect device with
+// given ident.
 func (c *SpircController) SendPlay(ident string) {
 	c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePlay)
 }
 
+// Sends a 'pause' command to spotify connect device with
+// given ident.
 func (c *SpircController) SendPause(ident string) {
 
 	c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePause)
 }
 
+// Connect to spotify-connect device at address (local network path).
+// Uses credentials from saved blob to authenticate.
 func (c *SpircController) ConnectToDevice(address string) {
 	c.session.discovery.ConnectToDevice(address)
 }
 
-func (c *SpircController) ListMdnsDevices() []connectDevice {
+// Lists devices on local network advertising spotify connect 
+// service (_spotify-connect._tcp.).
+func (c *SpircController) ListMdnsDevices() []ConnectDevice {
 	discovery := c.session.discovery
 	discovery.devicesLock.RLock()
-	res := make([]connectDevice, 0, len(discovery.devices))
+	res := make([]ConnectDevice, 0, len(discovery.devices))
 	for _, device := range discovery.devices {
-		res = append(res, connectDevice{
+		res = append(res, ConnectDevice{
 			Name: device.name,
 			Url:  device.path,
 		})
@@ -100,9 +118,10 @@ func (c *SpircController) ListMdnsDevices() []connectDevice {
 	return res
 }
 
-func (c *SpircController) ListDevices() []connectDevice {
+// List active spotify-connect devices that can be sent commands
+func (c *SpircController) ListDevices() []ConnectDevice {
 	c.devicesLock.RLock()
-	res := make([]connectDevice, 0, len(c.devices))
+	res := make([]ConnectDevice, 0, len(c.devices))
 	for _, device := range c.devices {
 		res = append(res, device)
 	}
@@ -158,7 +177,7 @@ func (c *SpircController) run() {
 
 		if frame.GetTyp() == Spotify.MessageType_kMessageTypeNotify {
 			c.devicesLock.Lock()
-			c.devices[*frame.Ident] = connectDevice{
+			c.devices[*frame.Ident] = ConnectDevice{
 				Name:  frame.DeviceState.GetName(),
 				Ident: *frame.Ident,
 			}
