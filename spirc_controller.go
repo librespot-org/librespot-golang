@@ -6,6 +6,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"log"
 	"sync"
+	"strings"
 )
 
 type SpircController struct {
@@ -44,6 +45,11 @@ func setupController(userSession *session, username string) *SpircController {
 	go controller.run()
 	controller.SendHello()
 	return controller
+}
+
+// Load comma seperated tracks 
+func (c *SpircController) LoadTrackIds(ident string, ids string) {
+	c.LoadTrack(ident, strings.Split(ids, ","));
 }
 
 // Load given list of tracks on spotify connect device with given
