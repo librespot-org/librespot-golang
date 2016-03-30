@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/mdns"
+	"github.com/badfortrains/mdns"
 	"log"
 	"net/http"
 	"net/url"
@@ -184,22 +184,6 @@ func (d *discovery) ConnectToDevice(address string) {
 	err = decoder.Decode(&f)
 
 	fmt.Println("got", f, resp, err)
-}
-
-func (d *discovery) saveLoginInfo() error {
-	file, err := os.Create(d.cachePath)
-	if err != nil {
-		return err
-	}
-
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	err = encoder.Encode(d.loginBlob)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (d *discovery) handleAddUser(r *http.Request) error {
