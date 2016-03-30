@@ -16,12 +16,12 @@ import (
 	"os"
 )
 
-type blobInfo struct {
+type BlobInfo struct {
 	Username    string
 	DecodedBlob string
 }
 
-func (b *blobInfo) saveToFile(path string) error {
+func (b *BlobInfo) saveToFile(path string) error {
 	file, err := os.Create(path)
 	if err != nil {
 		return err
@@ -37,8 +37,8 @@ func (b *blobInfo) saveToFile(path string) error {
 	return nil
 }
 
-func blobFromFile(path string) (blobInfo, error) {
-	result := blobInfo{}
+func blobFromFile(path string) (BlobInfo, error) {
+	result := BlobInfo{}
 	file, err := os.Open(path)
 	if err != nil {
 		return result, err
@@ -55,23 +55,23 @@ func blobFromFile(path string) (blobInfo, error) {
 }
 
 func newBlobInfo(blob64 string, client64 string,
-	keys privateKeys, deviceId string, username string) (blobInfo, error) {
+	keys privateKeys, deviceId string, username string) (BlobInfo, error) {
 
 	partDecoded, err := decodeBlob(blob64, client64, keys)
 	if err != nil {
-		return blobInfo{}, err
+		return BlobInfo{}, err
 	}
 
 	fullDecoded := decodeBlobSecondary(partDecoded, username,
 		deviceId)
 
-	return blobInfo{
+	return BlobInfo{
 		Username:    username,
 		DecodedBlob: base64.StdEncoding.EncodeToString(fullDecoded),
 	}, nil
 }
 
-func (b *blobInfo) makeAuthBlob(deviceId string, client64 string, dhKeys privateKeys) (string, error) {
+func (b *BlobInfo) makeAuthBlob(deviceId string, client64 string, dhKeys privateKeys) (string, error) {
 	secret := sha1.Sum([]byte(deviceId))
 	key := blobKey(b.Username, secret[:])
 
