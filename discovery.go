@@ -11,6 +11,10 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"math/rand"
+	"strconv"
+
+	"net"
 )
 
 type connectInfo struct {
@@ -254,15 +258,34 @@ func (d *discovery) startHttp(done chan int) {
 		}
 	})
 
-	d.httpServer = &http.Server{Addr: ":8080"}
+	d.httpServer = &http.Server{Addr: ":8000"}
 	log.Fatal(d.httpServer.ListenAndServe())
 }
 
 func (d *discovery) startDiscoverable() {
 	fmt.Println("start discoverable")
 	info := []string{"VERSION=1.0", "CPath=/"}
-	service, err := mdns.NewMDNSService("spotcontrol189",
-		"_spotify-connect._tcp", "", "", 8080, nil, info)
+
+	ifaces, err := net.Interfaces()
+	// handle err
+	ips := make([]net.IP, 0)
+	for _, i := range ifaces {
+	    addrs, _ := i.Addrs()
+	    // handle err
+	    for _, addr := range addrs {
+	        switch v := addr.(type) {
+	        case *net.IPNet:
+	                ips = append(ips, v.IP)
+	        case *net.IPAddr:
+	                ips = append(ips, v.IP)
+	        }
+	        fmt.Println("found ip ", ips)
+	        // process IP address
+	    }
+	}
+
+	service, err := mdns.NewMDNSService("spotcontrol"+strconv.Itoa(rand.Intn(200)),
+		"_spotify-connect._tcp", "", "", 8000, ips, info)
 	if err != nil {
 		fmt.Println(err)
 		log.Fatal("error starting discovery")
