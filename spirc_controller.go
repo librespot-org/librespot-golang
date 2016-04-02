@@ -5,8 +5,8 @@ import (
 	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"github.com/golang/protobuf/proto"
 	"log"
-	"sync"
 	"strings"
+	"sync"
 )
 
 type SpircController struct {
@@ -16,6 +16,7 @@ type SpircController struct {
 	username    string
 	devices     map[string]ConnectDevice
 	devicesLock sync.RWMutex
+	updateChan  chan Spotify.Frame
 }
 
 // Represents an available spotify connect device.
@@ -47,9 +48,9 @@ func setupController(userSession *session, username string) *SpircController {
 	return controller
 }
 
-// Load comma seperated tracks 
+// Load comma seperated tracks
 func (c *SpircController) LoadTrackIds(ident string, ids string) {
-	c.LoadTrack(ident, strings.Split(ids, ","));
+	c.LoadTrack(ident, strings.Split(ids, ","))
 }
 
 // Load given list of tracks on spotify connect device with given
@@ -212,6 +213,15 @@ func (c *SpircController) run() {
 			c.devicesLock.Lock()
 			delete(c.devices, *frame.Ident)
 			c.devicesLock.Unlock()
+		}
+
+		if c.updateChan != nil {
+			select {
+			case c.updateChan <- *frame:
+				fmt.Println("sent update")
+			default:
+				fmt.Println("dropped update")
+			}
 		}
 
 		fmt.Printf("%v %v %v %v %v %v \n",

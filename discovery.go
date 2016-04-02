@@ -93,7 +93,12 @@ func loginFromConnect(cachePath, deviceId string, deviceName string) discovery {
 
 	done := make(chan int)
 
-	go d.startHttp(done)
+	l, err := net.Listen("tcp", ":8000")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer l.Close()
+	go d.startHttp(done, l)
 	d.startDiscoverable()
 
 	<-done
@@ -233,7 +238,7 @@ func (d *discovery) handleAddUser(r *http.Request) error {
 	return nil
 }
 
-func (d *discovery) startHttp(done chan int) {
+func (d *discovery) startHttp(done chan int, l net.Listener) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		action := r.FormValue("action")
 		fmt.Println("got request: ", action)
@@ -258,8 +263,11 @@ func (d *discovery) startHttp(done chan int) {
 		}
 	})
 
-	d.httpServer = &http.Server{Addr: ":8000"}
-	log.Fatal(d.httpServer.ListenAndServe())
+	d.httpServer = &http.Server{}
+	err := d.httpServer.Serve(l)
+	if err != nil {
+		fmt.Println("got an error", err)
+	}
 }
 
 func (d *discovery) startDiscoverable() {

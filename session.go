@@ -128,9 +128,12 @@ func Login(username string, password string, appkeyPath string, deviceName strin
 	return LoginWithKey(username, password, data, deviceName)
 }
 
-func LoginBlob(blob *BlobInfo, appkey []byte, deviceName string) *SpircController {
+func LoginBlob(username string, blob string, appkey []byte, deviceName string) *SpircController {
 	deviceId := generateDeviceId(deviceName)
-	discovery := discoveryFromBlob(*blob, "", deviceId)
+	discovery := discoveryFromBlob(BlobInfo{
+		Username: username,
+		DecodedBlob: blob,
+	}, "", deviceId, deviceName)
 	s := session{
 		discovery: discovery,
 		deviceId:  deviceId,
