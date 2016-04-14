@@ -35,7 +35,8 @@ type session struct {
 	mercuryCommands chan command
 	discovery       discovery
 
-	deviceId string
+	deviceId   string
+	deviceName string
 }
 
 func (s *session) startConnection() {
@@ -107,9 +108,10 @@ func generateDeviceId(name string) string {
 }
 
 //Login to spotify using username, password and app key file.
-func Login(username string, password string, appkeyPath string) *SpircController {
+func Login(username string, password string, appkeyPath string, deviceName string) *SpircController {
 	s := session{
-		deviceId: generateDeviceId("spotcontrol"),
+		deviceId:   generateDeviceId(deviceName),
+		deviceName: deviceName,
 	}
 	s.startConnection()
 	loginPacket := loginPacketPassword(appkeyPath, username, password, s.deviceId)
@@ -121,12 +123,13 @@ func Login(username string, password string, appkeyPath string) *SpircController
 //in file at cacheBlobPath.
 //Once saved, the blob credentials allow the program
 //to connect to other spotify connect devices and control them.
-func LoginDiscovery(cacheBlobPath, appkeyPath string) *SpircController {
-	deviceId := generateDeviceId("spotcontrol")
-	discovery := loginFromConnect(cacheBlobPath, deviceId)
+func LoginDiscovery(cacheBlobPath, appkeyPath string, deviceName string) *SpircController {
+	deviceId := generateDeviceId(deviceName)
+	discovery := loginFromConnect(cacheBlobPath, deviceId, deviceName)
 	s := session{
-		discovery: discovery,
-		deviceId:  deviceId,
+		discovery:  discovery,
+		deviceId:   deviceId,
+		deviceName: deviceName,
 	}
 	s.startConnection()
 	loginPacket := s.getLoginBlobPacket(appkeyPath, discovery.loginBlob)
@@ -135,12 +138,13 @@ func LoginDiscovery(cacheBlobPath, appkeyPath string) *SpircController {
 
 //Login from credentials at cacheBlobPath previously saved
 //by LoginDiscovery.
-func LoginBlobFile(cacheBlobPath, appkeyPath string) *SpircController {
-	deviceId := generateDeviceId("spotcontrol")
-	discovery := loginFromFile(cacheBlobPath, deviceId)
+func LoginBlobFile(cacheBlobPath, appkeyPath string, deviceName string) *SpircController {
+	deviceId := generateDeviceId(deviceName)
+	discovery := loginFromFile(cacheBlobPath, deviceId, deviceName)
 	s := session{
-		discovery: discovery,
-		deviceId:  deviceId,
+		discovery:  discovery,
+		deviceId:   deviceId,
+		deviceName: deviceName,
 	}
 	s.startConnection()
 	loginPacket := s.getLoginBlobPacket(appkeyPath, discovery.loginBlob)
