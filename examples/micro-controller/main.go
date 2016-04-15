@@ -10,6 +10,8 @@ import (
 	"os"
 )
 
+const defaultdevicename = "SpotControl"
+
 func chooseDevice(controller *spotcontrol.SpircController, reader *bufio.Reader) string{
 	devices := controller.ListDevices()
 	if len(devices) == 0 {
@@ -85,16 +87,17 @@ func main() {
 	password := flag.String("password", "", "spotify password")
 	appkey := flag.String("appkey", "./spotify_appkey.key", "spotify appkey file path")
 	blobPath := flag.String("blobPath", "", "path to saved blob")
+	devicename := flag.String("devicename", defaultdevicename, "name of device")
 	flag.Parse()
 
 	var sController *spotcontrol.SpircController
 	if *username != "" && *password != ""{
-		sController = spotcontrol.Login(*username, *password, *appkey)
+		sController = spotcontrol.Login(*username, *password, *appkey, *devicename)
 	} else if *blobPath != "" {
 		if _, err := os.Stat(*blobPath); os.IsNotExist(err) {
-			sController = spotcontrol.LoginDiscovery(*blobPath, *appkey)
+			sController = spotcontrol.LoginDiscovery(*blobPath, *appkey, *devicename)
 		} else {
-			sController = spotcontrol.LoginBlobFile(*blobPath, *appkey)
+			sController = spotcontrol.LoginBlobFile(*blobPath, *appkey, *devicename)
 		}
 	} else {
 		fmt.Println("need to supply a username and password or a blob file path")
