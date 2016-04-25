@@ -19,21 +19,12 @@ const (
 	request_type
 )
 
-type command struct {
-	commandType uint32
-	uri         string
-	responseCh  chan mercuryResponse
-	responseCb  responseCallback
-	request     mercuryRequest
-}
-
 //Represents an active authenticated spotify connection
 type session struct {
 	stream  shannonStream
 	mercury mercuryManager
 
-	mercuryCommands chan command
-	discovery       *discovery
+	discovery *discovery
 
 	deviceId   string
 	deviceName string
@@ -42,7 +33,7 @@ type session struct {
 func (s *session) startConnection() {
 	tcpCon, err := net.Dial("tcp", "sjc1-accesspoint-a95.ap.spotify.com:4070")
 	if err != nil {
-		log.Fatal("Failed to coonect:", err)
+		log.Fatal("Failed to connect:", err)
 	}
 	conn := makePlainConnection(tcpCon, tcpCon)
 
@@ -85,7 +76,6 @@ func (s *session) startConnection() {
 
 	s.stream = setupStream(sharedKeys, conn)
 	s.mercury = setupMercury(s)
-	s.mercuryCommands = make(chan command)
 }
 
 func (s *session) doLogin(packet []byte, username string) *SpircController {
@@ -96,7 +86,7 @@ func (s *session) doLogin(packet []byte, username string) *SpircController {
 
 	//poll once for authentication response
 	s.poll()
-	s.run()
+	go s.run()
 
 	return setupController(s, username)
 }
@@ -180,53 +170,21 @@ type cmdPkt struct {
 }
 
 func (s *session) run() {
-	pktCh := make(chan cmdPkt)
-	done := make(chan int)
-
-	//wrap RecvPacket in a goroutine so we can select on it
-	go func() {
-		for {
-			cmd, data, err := s.stream.RecvPacket()
-			if err != nil {
-				log.Fatal(err)
-			}
-			pktCh <- cmdPkt{cmd, data}
-			<-done
+	for {
+		cmd, data, err := s.stream.RecvPacket()
+		if err != nil {
+			log.Fatal(err)
 		}
-	}()
-
-	//Keep all work in this thread
-	go func() {
-		for {
-			select {
-			case pkt := <-pktCh:
-				s.handle(pkt.cmd, pkt.data)
-				done <- 1
-			case command := <-s.mercuryCommands:
-				if command.commandType == subscribe_type {
-					s.mercury.Subscribe(command.uri, command.responseCh)
-				} else {
-					s.mercury.request(command.request, command.responseCb)
-				}
-			}
-		}
-	}()
+		s.handle(cmd, data)
+	}
 }
 
 func (s *session) mercurySubscribe(uri string, responseCh chan mercuryResponse) {
-	s.mercuryCommands <- command{
-		commandType: subscribe_type,
-		uri:         uri,
-		responseCh:  responseCh,
-	}
+	s.mercury.Subscribe(uri, responseCh)
 }
 
 func (s *session) mercurySendRequest(request mercuryRequest, responseCb responseCallback) {
-	s.mercuryCommands <- command{
-		commandType: request_type,
-		request:     request,
-		responseCb:  responseCb,
-	}
+	s.mercury.request(request, responseCb)
 }
 
 func (s *session) handle(cmd uint8, data []byte) {

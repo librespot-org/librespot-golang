@@ -7,6 +7,7 @@ import (
 	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"github.com/golang/protobuf/proto"
 	"io"
+	"sync"
 )
 
 type mercuryResponse struct {
@@ -30,6 +31,7 @@ type mercuryPending struct {
 }
 
 type mercuryManager struct {
+	seqLock       sync.Mutex
 	nextSeq       uint32
 	pending       map[string]mercuryPending
 	subscriptions map[string][]chan mercuryResponse
@@ -73,9 +75,11 @@ func (m *mercuryManager) Subscribe(uri string, recv chan mercuryResponse) error 
 }
 
 func (m *mercuryManager) request(req mercuryRequest, cb responseCallback) (err error) {
+	m.seqLock.Lock()
 	seq := make([]byte, 4)
 	binary.BigEndian.PutUint32(seq, m.nextSeq)
 	m.nextSeq += 1
+	m.seqLock.Unlock()
 	data, err := encodeRequest(seq, req)
 	if err != nil {
 		return err
@@ -209,6 +213,7 @@ func (m *mercuryManager) handle(cmd uint8, reader io.Reader) (err error) {
 	}
 
 	if flags == 1 {
+		delete(m.pending, seqKey)
 		m.completeRequest(cmd, pending)
 	} else {
 		m.pending[seqKey] = pending
