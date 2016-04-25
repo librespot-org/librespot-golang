@@ -33,7 +33,7 @@ type session struct {
 	mercury mercuryManager
 
 	mercuryCommands chan command
-	discovery       discovery
+	discovery       *discovery
 
 	deviceId   string
 	deviceName string
@@ -134,14 +134,18 @@ func LoginBlob(username string, blob string, appkey []byte, deviceName string) *
 		Username: username,
 		DecodedBlob: blob,
 	}, "", deviceId, deviceName)
+	return sessionFromDiscovery(discovery, appkey)
+}
+
+func sessionFromDiscovery(d *discovery, appkey []byte) *SpircController {
 	s := session{
-		discovery: discovery,
-		deviceId:  deviceId,
-		deviceName: deviceName,
+		discovery: d,
+		deviceId:  d.deviceId,
+		deviceName: d.deviceName,
 	}
 	s.startConnection()
-	loginPacket := s.getLoginBlobPacket(appkey, discovery.loginBlob)
-	return s.doLogin(loginPacket, discovery.loginBlob.Username)
+	loginPacket := s.getLoginBlobPacket(appkey, d.loginBlob)
+	return s.doLogin(loginPacket, d.loginBlob.Username)
 }
 
 //Registers spotcontrol as a spotify conenct device via mdns.
@@ -152,19 +156,11 @@ func LoginBlob(username string, blob string, appkey []byte, deviceName string) *
 func LoginDiscovery(cacheBlobPath, appkeyPath string, deviceName string) *SpircController {
 	deviceId := generateDeviceId(deviceName)
 	discovery := loginFromConnect(cacheBlobPath, deviceId, deviceName)
-	s := session{
-		discovery:  discovery,
-		deviceId:   deviceId,
-		deviceName: deviceName,
-	}
-	s.startConnection()
 	appkey, err := ioutil.ReadFile(appkeyPath)
 	if err != nil {
 		log.Fatal("failed to open spotify appkey file")
 	}
-
-	loginPacket := s.getLoginBlobPacket(appkey, discovery.loginBlob)
-	return s.doLogin(loginPacket, discovery.loginBlob.Username)
+	return sessionFromDiscovery(discovery, appkey)
 }
 
 //Login from credentials at cacheBlobPath previously saved
@@ -172,18 +168,11 @@ func LoginDiscovery(cacheBlobPath, appkeyPath string, deviceName string) *SpircC
 func LoginBlobFile(cacheBlobPath, appkeyPath string, deviceName string) *SpircController {
 	deviceId := generateDeviceId(deviceName)
 	discovery := loginFromFile(cacheBlobPath, deviceId, deviceName)
-	s := session{
-		discovery:  discovery,
-		deviceId:   deviceId,
-		deviceName: deviceName,
-	}
-	s.startConnection()
 	appkey, err := ioutil.ReadFile(appkeyPath)
 	if err != nil {
 		log.Fatal("failed to open spotify appkey file")
 	}
-	loginPacket := s.getLoginBlobPacket(appkey, discovery.loginBlob)
-	return s.doLogin(loginPacket, discovery.loginBlob.Username)
+	return sessionFromDiscovery(discovery, appkey)
 }
 
 type cmdPkt struct {

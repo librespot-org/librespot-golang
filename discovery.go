@@ -83,7 +83,7 @@ func BlobFromDiscovery(deviceName string) *BlobInfo {
 	return &d.loginBlob
 }
 
-func loginFromConnect(cachePath, deviceId string, deviceName string) discovery {
+func loginFromConnect(cachePath, deviceId string, deviceName string) *discovery {
 	d := discovery{
 		keys:      generateKeys(),
 		cachePath: cachePath,
@@ -103,10 +103,10 @@ func loginFromConnect(cachePath, deviceId string, deviceName string) discovery {
 
 	<-done
 
-	return d
+	return &d
 }
 
-func discoveryFromBlob(blob BlobInfo, cachePath, deviceId string, deviceName string) discovery {
+func discoveryFromBlob(blob BlobInfo, cachePath, deviceId string, deviceName string) *discovery {
 	d := discovery{
 		keys:      generateKeys(),
 		cachePath: cachePath,
@@ -117,10 +117,10 @@ func discoveryFromBlob(blob BlobInfo, cachePath, deviceId string, deviceName str
 
 	d.FindDevices()
 
-	return d
+	return &d
 }
 
-func loginFromFile(cachePath, deviceId string, deviceName string) discovery {
+func loginFromFile(cachePath, deviceId string, deviceName string) *discovery {
 	blob, err := blobFromFile(cachePath)
 	if err != nil {
 		log.Fatal("failed to get blob from file")
