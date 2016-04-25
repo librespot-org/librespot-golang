@@ -179,12 +179,12 @@ func (s *session) run() {
 	}
 }
 
-func (s *session) mercurySubscribe(uri string, responseCh chan mercuryResponse) {
-	s.mercury.Subscribe(uri, responseCh)
+func (s *session) mercurySubscribe(uri string, responseCh chan mercuryResponse) error {
+	return s.mercury.Subscribe(uri, responseCh)
 }
 
-func (s *session) mercurySendRequest(request mercuryRequest, responseCb responseCallback) {
-	s.mercury.request(request, responseCb)
+func (s *session) mercurySendRequest(request mercuryRequest, responseCb responseCallback) error {
+	return s.mercury.request(request, responseCb)
 }
 
 func (s *session) handle(cmd uint8, data []byte) {

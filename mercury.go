@@ -95,7 +95,10 @@ func (m *mercuryManager) request(req mercuryRequest, cb responseCallback) (err e
 		cmd = 0xb2
 	}
 
-	m.session.stream.SendPacket(cmd, data)
+	err = m.session.stream.SendPacket(cmd, data)
+	if err != nil {
+		return err
+	}
 
 	m.pending[string(seq)] = mercuryPending{
 		callback: cb,
