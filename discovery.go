@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"github.com/badfortrains/mdns"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
-	"math/rand"
-	"strconv"
 
 	"net"
 )
@@ -44,10 +44,10 @@ type getInfo struct {
 }
 
 type discovery struct {
-	keys      privateKeys
-	cachePath string
-	loginBlob BlobInfo
-	deviceId  string
+	keys       privateKeys
+	cachePath  string
+	loginBlob  BlobInfo
+	deviceId   string
 	deviceName string
 
 	mdnsServer  *mdns.Server
@@ -85,9 +85,9 @@ func BlobFromDiscovery(deviceName string) *BlobInfo {
 
 func loginFromConnect(cachePath, deviceId string, deviceName string) *discovery {
 	d := discovery{
-		keys:      generateKeys(),
-		cachePath: cachePath,
-		deviceId:  deviceId,
+		keys:       generateKeys(),
+		cachePath:  cachePath,
+		deviceId:   deviceId,
 		deviceName: deviceName,
 	}
 
@@ -108,10 +108,10 @@ func loginFromConnect(cachePath, deviceId string, deviceName string) *discovery 
 
 func discoveryFromBlob(blob BlobInfo, cachePath, deviceId string, deviceName string) *discovery {
 	d := discovery{
-		keys:      generateKeys(),
-		cachePath: cachePath,
-		deviceId:  deviceId,
-		loginBlob: blob,
+		keys:       generateKeys(),
+		cachePath:  cachePath,
+		deviceId:   deviceId,
+		loginBlob:  blob,
 		deviceName: deviceName,
 	}
 
@@ -278,18 +278,18 @@ func (d *discovery) startDiscoverable() {
 	// handle err
 	ips := make([]net.IP, 0)
 	for _, i := range ifaces {
-	    addrs, _ := i.Addrs()
-	    // handle err
-	    for _, addr := range addrs {
-	        switch v := addr.(type) {
-	        case *net.IPNet:
-	                ips = append(ips, v.IP)
-	        case *net.IPAddr:
-	                ips = append(ips, v.IP)
-	        }
-	        fmt.Println("found ip ", ips)
-	        // process IP address
-	    }
+		addrs, _ := i.Addrs()
+		// handle err
+		for _, addr := range addrs {
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ips = append(ips, v.IP)
+			case *net.IPAddr:
+				ips = append(ips, v.IP)
+			}
+			fmt.Println("found ip ", ips)
+			// process IP address
+		}
 	}
 
 	service, err := mdns.NewMDNSService("spotcontrol"+strconv.Itoa(rand.Intn(200)),

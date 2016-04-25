@@ -107,7 +107,6 @@ func generateDeviceId(name string) string {
 	return hash64
 }
 
-
 //Login to spotify with supplied byte slice for app key
 func LoginWithKey(username string, password string, appkey []byte, deviceName string) *SpircController {
 	s := session{
@@ -131,7 +130,7 @@ func Login(username string, password string, appkeyPath string, deviceName strin
 func LoginBlob(username string, blob string, appkey []byte, deviceName string) *SpircController {
 	deviceId := generateDeviceId(deviceName)
 	discovery := discoveryFromBlob(BlobInfo{
-		Username: username,
+		Username:    username,
 		DecodedBlob: blob,
 	}, "", deviceId, deviceName)
 	return sessionFromDiscovery(discovery, appkey)
@@ -139,8 +138,8 @@ func LoginBlob(username string, blob string, appkey []byte, deviceName string) *
 
 func sessionFromDiscovery(d *discovery, appkey []byte) *SpircController {
 	s := session{
-		discovery: d,
-		deviceId:  d.deviceId,
+		discovery:  d,
+		deviceId:   d.deviceId,
 		deviceName: d.deviceName,
 	}
 	s.startConnection()
