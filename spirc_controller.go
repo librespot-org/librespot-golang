@@ -98,6 +98,22 @@ func (c *SpircController) SendPause(ident string) {
 	c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePause)
 }
 
+func (c *SpircController) SendVolume(ident string, volume uint32) {
+	c.seqNr += 1
+	messageType := Spotify.MessageType_kMessageTypeVolume
+	frame := &Spotify.Frame{
+		Version:         proto.Uint32(1),
+		Ident:           proto.String(c.ident),
+		ProtocolVersion: proto.String("2.0.0"),
+		SeqNr:           proto.Uint32(c.seqNr),
+		Typ:             &messageType,
+		Recipient:       []string{ident},
+		Volume:          proto.Uint32(volume),
+	}
+
+	c.sendFrame(frame)
+}
+
 // Connect to spotify-connect device at address (local network path).
 // Uses credentials from saved blob to authenticate.
 func (c *SpircController) ConnectToDevice(address string) {
