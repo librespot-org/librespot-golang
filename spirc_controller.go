@@ -193,13 +193,18 @@ func (c *SpircController) run() {
 			continue
 		}
 
-		if frame.GetTyp() == Spotify.MessageType_kMessageTypeNotify {
+		if frame.GetTyp() == Spotify.MessageType_kMessageTypeNotify ||
+			(frame.GetTyp() == Spotify.MessageType_kMessageTypeHello && frame.DeviceState.GetName() != "") {
 			c.devicesLock.Lock()
 			c.devices[*frame.Ident] = ConnectDevice{
 				Name:   frame.DeviceState.GetName(),
 				Ident:  *frame.Ident,
 				Volume: frame.DeviceState.GetVolume(),
 			}
+			c.devicesLock.Unlock()
+		} else if frame.GetTyp() == Spotify.MessageType_kMessageTypeGoodbye {
+			c.devicesLock.Lock()
+			delete(c.devices, *frame.Ident)
 			c.devicesLock.Unlock()
 		}
 
