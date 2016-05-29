@@ -21,9 +21,10 @@ type SpircController struct {
 // For mdns devices not yet authenitcated, Ident will be ""
 // and Url will be the address to pass to ConnectToDevie.
 type ConnectDevice struct {
-	Name  string
-	Ident string
-	Url   string
+	Name   string
+	Ident  string
+	Url    string
+	Volume uint32
 }
 
 // Starts controller.  Registers listeners for Spotify connect device
@@ -195,8 +196,9 @@ func (c *SpircController) run() {
 		if frame.GetTyp() == Spotify.MessageType_kMessageTypeNotify {
 			c.devicesLock.Lock()
 			c.devices[*frame.Ident] = ConnectDevice{
-				Name:  frame.DeviceState.GetName(),
-				Ident: *frame.Ident,
+				Name:   frame.DeviceState.GetName(),
+				Ident:  *frame.Ident,
+				Volume: frame.DeviceState.GetVolume(),
 			}
 			c.devicesLock.Unlock()
 		}
