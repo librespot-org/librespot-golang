@@ -21,9 +21,10 @@ type SpircController struct {
 // For mdns devices not yet authenitcated, Ident will be ""
 // and Url will be the address to pass to ConnectToDevie.
 type ConnectDevice struct {
-	Name  string
-	Ident string
-	Url   string
+	Name   string
+	Ident  string
+	Url    string
+	Volume uint32
 }
 
 // Starts controller.  Registers listeners for Spotify connect device
@@ -96,6 +97,22 @@ func (c *SpircController) SendPlay(ident string) {
 func (c *SpircController) SendPause(ident string) {
 
 	c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePause)
+}
+
+func (c *SpircController) SendVolume(ident string, volume uint32) {
+	c.seqNr += 1
+	messageType := Spotify.MessageType_kMessageTypeVolume
+	frame := &Spotify.Frame{
+		Version:         proto.Uint32(1),
+		Ident:           proto.String(c.ident),
+		ProtocolVersion: proto.String("2.0.0"),
+		SeqNr:           proto.Uint32(c.seqNr),
+		Typ:             &messageType,
+		Recipient:       []string{ident},
+		Volume:          proto.Uint32(volume),
+	}
+
+	c.sendFrame(frame)
 }
 
 // Connect to spotify-connect device at address (local network path).
@@ -176,12 +193,18 @@ func (c *SpircController) run() {
 			continue
 		}
 
-		if frame.GetTyp() == Spotify.MessageType_kMessageTypeNotify {
+		if frame.GetTyp() == Spotify.MessageType_kMessageTypeNotify ||
+			(frame.GetTyp() == Spotify.MessageType_kMessageTypeHello && frame.DeviceState.GetName() != "") {
 			c.devicesLock.Lock()
 			c.devices[*frame.Ident] = ConnectDevice{
-				Name:  frame.DeviceState.GetName(),
-				Ident: *frame.Ident,
+				Name:   frame.DeviceState.GetName(),
+				Ident:  *frame.Ident,
+				Volume: frame.DeviceState.GetVolume(),
 			}
+			c.devicesLock.Unlock()
+		} else if frame.GetTyp() == Spotify.MessageType_kMessageTypeGoodbye {
+			c.devicesLock.Lock()
+			delete(c.devices, *frame.Ident)
 			c.devicesLock.Unlock()
 		}
 
