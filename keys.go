@@ -13,8 +13,9 @@ type privateKeys struct {
 	privateKey *big.Int
 	publicKey  *big.Int
 
-	generator *big.Int
-	prime     *big.Int
+	generator   *big.Int
+	prime       *big.Int
+	clientNonce []byte
 }
 
 type sharedKeys struct {
@@ -56,11 +57,12 @@ func powm(base, exp, modulus *big.Int) *big.Int {
 func generateKeys() privateKeys {
 	private := new(big.Int)
 	private.SetBytes(randomVec(95))
+	nonce := randomVec(0x10)
 
-	return generateKeysFromPrivate(private)
+	return generateKeysFromPrivate(private, nonce)
 }
 
-func generateKeysFromPrivate(private *big.Int) privateKeys {
+func generateKeysFromPrivate(private *big.Int, nonce []byte) privateKeys {
 	DH_GENERATOR := big.NewInt(0x2)
 	DH_PRIME := new(big.Int)
 	DH_PRIME.SetBytes([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc9,
@@ -79,8 +81,9 @@ func generateKeysFromPrivate(private *big.Int) privateKeys {
 		privateKey: private,
 		publicKey:  powm(DH_GENERATOR, private, DH_PRIME),
 
-		generator: DH_GENERATOR,
-		prime:     DH_PRIME,
+		generator:   DH_GENERATOR,
+		prime:       DH_PRIME,
+		clientNonce: nonce,
 	}
 }
 

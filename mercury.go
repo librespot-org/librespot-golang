@@ -38,8 +38,8 @@ type mercuryManager struct {
 	session       *session
 }
 
-func setupMercury(s *session) mercuryManager {
-	return mercuryManager{
+func setupMercury(s *session) mercuryCon {
+	return &mercuryManager{
 		pending:       make(map[string]mercuryPending),
 		subscriptions: make(map[string][]chan mercuryResponse),
 		session:       s,
@@ -160,16 +160,13 @@ func encodeRequest(seq []byte, req mercuryRequest) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (m *mercuryManager) handle(cmd uint8, reader io.Reader) (err error) {
+func handleHead(reader io.Reader) (seq []byte, flags uint8, count uint16, err error) {
 	var seqLength uint16
-	var flags uint8
-	var count uint16
-
 	err = binary.Read(reader, binary.BigEndian, &seqLength)
 	if err != nil {
 		return
 	}
-	seq := make([]byte, seqLength)
+	seq = make([]byte, seqLength)
 	_, err = io.ReadFull(reader, seq)
 	if err != nil {
 		fmt.Println("read seq")
@@ -184,6 +181,16 @@ func (m *mercuryManager) handle(cmd uint8, reader io.Reader) (err error) {
 	err = binary.Read(reader, binary.BigEndian, &count)
 	if err != nil {
 		fmt.Println("read count")
+		return
+	}
+
+	return
+}
+
+func (m *mercuryManager) handle(cmd uint8, reader io.Reader) (err error) {
+
+	seq, flags, count, err := handleHead(reader)
+	if err != nil {
 		return
 	}
 

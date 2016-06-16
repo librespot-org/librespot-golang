@@ -35,8 +35,8 @@ func setKey(ctx *C.shn_ctx, key []uint8) {
 		C.int(len(nonce)))
 }
 
-func setupStream(keys sharedKeys, conn plainConnection) shannonStream {
-	s := shannonStream{
+func setupStream(keys sharedKeys, conn plainConnection) packetStream {
+	s := &shannonStream{
 		reader: conn.reader,
 		writer: conn.writer,
 	}

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"github.com/golang/protobuf/proto"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -19,10 +20,30 @@ const (
 	request_type
 )
 
+type mercuryCon interface {
+	Subscribe(uri string, recv chan mercuryResponse) error
+	request(req mercuryRequest, cb responseCallback) (err error)
+	handle(cmd uint8, reader io.Reader) (err error)
+}
+
+type packetStream interface {
+	SendPacket(cmd uint8, data []byte) (err error)
+	RecvPacket() (cmd uint8, buf []byte, err error)
+}
+
+type dialer interface {
+	Dial(network, address string) (net.Conn, error)
+}
+
 //Represents an active authenticated spotify connection
 type session struct {
-	stream  shannonStream
-	mercury mercuryManager
+	stream  packetStream
+	mercury mercuryCon
+	tcpCon  io.ReadWriter
+	keys    privateKeys
+
+	mercuryConstructor func(s *session) mercuryCon
+	shannonConstructor func(keys sharedKeys, conn plainConnection) packetStream
 
 	discovery *discovery
 
@@ -31,14 +52,8 @@ type session struct {
 }
 
 func (s *session) startConnection() {
-	tcpCon, err := net.Dial("tcp", "sjc1-accesspoint-a95.ap.spotify.com:4070")
-	if err != nil {
-		log.Fatal("Failed to connect:", err)
-	}
-	conn := makePlainConnection(tcpCon, tcpCon)
-
-	keys := generateKeys()
-	helloMessage := helloPacket(keys.pubKey())
+	conn := makePlainConnection(s.tcpCon, s.tcpCon)
+	helloMessage := helloPacket(s.keys.pubKey(), s.keys.clientNonce)
 	initClientPacket, err := conn.SendPrefixPacket([]byte{0, 4}, helloMessage)
 	if err != nil {
 		log.Fatal("error writing client hello ", err)
@@ -52,7 +67,7 @@ func (s *session) startConnection() {
 	}
 
 	remoteKey := response.Challenge.LoginCryptoChallenge.DiffieHellman.Gs
-	sharedKeys := keys.addRemoteKey(remoteKey, initClientPacket, initServerPacket)
+	sharedKeys := s.keys.addRemoteKey(remoteKey, initClientPacket, initServerPacket)
 
 	plainResponse := &Spotify.ClientResponsePlaintext{
 		LoginCryptoResponse: &Spotify.LoginCryptoResponseUnion{
@@ -74,8 +89,8 @@ func (s *session) startConnection() {
 		log.Fatal("error writing client plain response ", err)
 	}
 
-	s.stream = setupStream(sharedKeys, conn)
-	s.mercury = setupMercury(s)
+	s.stream = s.shannonConstructor(sharedKeys, conn)
+	s.mercury = s.mercuryConstructor(s)
 }
 
 func (s *session) doLogin(packet []byte, username string) *SpircController {
@@ -99,13 +114,9 @@ func generateDeviceId(name string) string {
 
 //Login to spotify with supplied byte slice for app key
 func LoginWithKey(username string, password string, appkey []byte, deviceName string) *SpircController {
-	s := session{
-		deviceId:   generateDeviceId(deviceName),
-		deviceName: deviceName,
-	}
-	s.startConnection()
-	loginPacket := loginPacketPassword(appkey, username, password, s.deviceId)
-	return s.doLogin(loginPacket, username)
+	s := setupSession()
+
+	return s.loginSession(username, password, appkey, deviceName)
 }
 
 //Login to spotify using username, password and app key file.
@@ -117,6 +128,16 @@ func Login(username string, password string, appkeyPath string, deviceName strin
 	return LoginWithKey(username, password, data, deviceName)
 }
 
+func (s *session) loginSession(username string, password string,
+	appkey []byte, deviceName string) *SpircController {
+	s.deviceId = generateDeviceId(deviceName)
+	s.deviceName = deviceName
+
+	s.startConnection()
+	loginPacket := loginPacketPassword(appkey, username, password, s.deviceId)
+	return s.doLogin(loginPacket, username)
+}
+
 func LoginBlob(username string, blob string, appkey []byte, deviceName string) *SpircController {
 	deviceId := generateDeviceId(deviceName)
 	discovery := discoveryFromBlob(BlobInfo{
@@ -126,12 +147,25 @@ func LoginBlob(username string, blob string, appkey []byte, deviceName string) *
 	return sessionFromDiscovery(discovery, appkey)
 }
 
-func sessionFromDiscovery(d *discovery, appkey []byte) *SpircController {
-	s := session{
-		discovery:  d,
-		deviceId:   d.deviceId,
-		deviceName: d.deviceName,
+func setupSession() *session {
+	tcpCon, err := net.Dial("tcp", "sjc1-accesspoint-a95.ap.spotify.com:4070")
+	if err != nil {
+		log.Fatal("Failed to connect:", err)
 	}
+	return &session{
+		keys:               generateKeys(),
+		tcpCon:             tcpCon,
+		mercuryConstructor: setupMercury,
+		shannonConstructor: setupStream,
+	}
+}
+
+func sessionFromDiscovery(d *discovery, appkey []byte) *SpircController {
+	s := setupSession()
+	s.discovery = d
+	s.deviceId = d.deviceId
+	s.deviceName = s.deviceName
+
 	s.startConnection()
 	loginPacket := s.getLoginBlobPacket(appkey, d.loginBlob)
 	return s.doLogin(loginPacket, d.loginBlob.Username)
@@ -173,7 +207,7 @@ func (s *session) run() {
 	for {
 		cmd, data, err := s.stream.RecvPacket()
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("run error", err)
 		}
 		s.handle(cmd, data)
 	}
@@ -192,19 +226,19 @@ func (s *session) handle(cmd uint8, data []byte) {
 	case cmd == 0x4:
 		err := s.stream.SendPacket(0x49, data)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("handle 0x4", err)
 		}
 	case cmd == 0x1b:
 	case 0xb2 <= cmd && cmd <= 0xb6:
 		err := s.mercury.handle(cmd, bytes.NewReader(data))
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("handle 0xbx", err)
 		}
 	case cmd == 0xac:
 		welcome := &Spotify.APWelcome{}
 		err := proto.Unmarshal(data, welcome)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("handle 0xac", err)
 		}
 		fmt.Println("Authentication succeedded: ", welcome.GetCanonicalUsername())
 
@@ -217,7 +251,7 @@ func (s *session) handle(cmd uint8, data []byte) {
 func (s *session) poll() {
 	cmd, data, err := s.stream.RecvPacket()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("poll error", err)
 	}
 	s.handle(cmd, data)
 }
@@ -296,7 +330,7 @@ func loginPacket(appkey []byte, username string, authData []byte,
 	return packetData
 }
 
-func helloPacket(publicKey []byte) []byte {
+func helloPacket(publicKey []byte, nonce []byte) []byte {
 	hello := &Spotify.ClientHello{
 		BuildInfo: &Spotify.BuildInfo{
 			Product:  Spotify.Product_PRODUCT_LIBSPOTIFY_EMBEDDED.Enum(),
@@ -311,7 +345,7 @@ func helloPacket(publicKey []byte) []byte {
 				ServerKeysKnown: proto.Uint32(1),
 			},
 		},
-		ClientNonce: randomVec(0x10),
+		ClientNonce: nonce,
 		FeatureSet: &Spotify.FeatureSet{
 			Autoupdate2: proto.Bool(true),
 		},
