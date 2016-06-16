@@ -195,7 +195,7 @@ func (s *session) handle(cmd uint8, data []byte) {
 			log.Fatal(err)
 		}
 	case cmd == 0x1b:
-	case 0xb2 < cmd && cmd < 0xb6:
+	case 0xb2 <= cmd && cmd <= 0xb6:
 		err := s.mercury.handle(cmd, bytes.NewReader(data))
 		if err != nil {
 			log.Fatal(err)

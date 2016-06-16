@@ -204,7 +204,7 @@ func (m *mercuryManager) handle(cmd uint8, reader io.Reader) (err error) {
 		}
 
 		if pending.partial != nil {
-			part = append(part, pending.partial...)
+			part = append(pending.partial, part...)
 			pending.partial = nil
 		}
 
