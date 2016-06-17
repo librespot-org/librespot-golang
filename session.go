@@ -148,7 +148,12 @@ func LoginBlob(username string, blob string, appkey []byte, deviceName string) *
 }
 
 func setupSession() *session {
-	tcpCon, err := net.Dial("tcp", "sjc1-accesspoint-a95.ap.spotify.com:4070")
+	apUrl, err := apresolve()
+	if err != nil {
+		log.Fatal("Failed to get ap url", err)
+	}
+
+	tcpCon, err := net.Dial("tcp", apUrl)
 	if err != nil {
 		log.Fatal("Failed to connect:", err)
 	}
