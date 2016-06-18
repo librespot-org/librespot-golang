@@ -25,7 +25,7 @@ type RadioRequest struct {
 func (m *RadioRequest) Reset()                    { *m = RadioRequest{} }
 func (m *RadioRequest) String() string            { return proto.CompactTextString(m) }
 func (*RadioRequest) ProtoMessage()               {}
-func (*RadioRequest) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{0} }
+func (*RadioRequest) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{0} }
 
 func (m *RadioRequest) GetUris() []string {
 	if m != nil {
@@ -70,7 +70,7 @@ type MultiSeedRequest struct {
 func (m *MultiSeedRequest) Reset()                    { *m = MultiSeedRequest{} }
 func (m *MultiSeedRequest) String() string            { return proto.CompactTextString(m) }
 func (*MultiSeedRequest) ProtoMessage()               {}
-func (*MultiSeedRequest) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{1} }
+func (*MultiSeedRequest) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{1} }
 
 func (m *MultiSeedRequest) GetUris() []string {
 	if m != nil {
@@ -89,7 +89,7 @@ type Feedback struct {
 func (m *Feedback) Reset()                    { *m = Feedback{} }
 func (m *Feedback) String() string            { return proto.CompactTextString(m) }
 func (*Feedback) ProtoMessage()               {}
-func (*Feedback) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{2} }
+func (*Feedback) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{2} }
 
 func (m *Feedback) GetUri() string {
 	if m != nil && m.Uri != nil {
@@ -124,7 +124,7 @@ type Tracks struct {
 func (m *Tracks) Reset()                    { *m = Tracks{} }
 func (m *Tracks) String() string            { return proto.CompactTextString(m) }
 func (*Tracks) ProtoMessage()               {}
-func (*Tracks) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{3} }
+func (*Tracks) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{3} }
 
 func (m *Tracks) GetGids() []string {
 	if m != nil {
@@ -178,7 +178,7 @@ type Station struct {
 func (m *Station) Reset()                    { *m = Station{} }
 func (m *Station) String() string            { return proto.CompactTextString(m) }
 func (*Station) ProtoMessage()               {}
-func (*Station) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{4} }
+func (*Station) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{4} }
 
 func (m *Station) GetId() string {
 	if m != nil && m.Id != nil {
@@ -258,7 +258,7 @@ type Rules struct {
 func (m *Rules) Reset()                    { *m = Rules{} }
 func (m *Rules) String() string            { return proto.CompactTextString(m) }
 func (*Rules) ProtoMessage()               {}
-func (*Rules) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{5} }
+func (*Rules) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{5} }
 
 func (m *Rules) GetJs() string {
 	if m != nil && m.Js != nil {
@@ -276,7 +276,7 @@ type StationResponse struct {
 func (m *StationResponse) Reset()                    { *m = StationResponse{} }
 func (m *StationResponse) String() string            { return proto.CompactTextString(m) }
 func (*StationResponse) ProtoMessage()               {}
-func (*StationResponse) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{6} }
+func (*StationResponse) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{6} }
 
 func (m *StationResponse) GetStation() *Station {
 	if m != nil {
@@ -300,7 +300,7 @@ type StationList struct {
 func (m *StationList) Reset()                    { *m = StationList{} }
 func (m *StationList) String() string            { return proto.CompactTextString(m) }
 func (*StationList) ProtoMessage()               {}
-func (*StationList) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{7} }
+func (*StationList) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{7} }
 
 func (m *StationList) GetStations() []*Station {
 	if m != nil {
@@ -317,7 +317,7 @@ type LikedPlaylist struct {
 func (m *LikedPlaylist) Reset()                    { *m = LikedPlaylist{} }
 func (m *LikedPlaylist) String() string            { return proto.CompactTextString(m) }
 func (*LikedPlaylist) ProtoMessage()               {}
-func (*LikedPlaylist) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{8} }
+func (*LikedPlaylist) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{8} }
 
 func (m *LikedPlaylist) GetUri() string {
 	if m != nil && m.Uri != nil {
@@ -338,7 +338,7 @@ func init() {
 	proto.RegisterType((*LikedPlaylist)(nil), "Spotify.LikedPlaylist")
 }
 
-var fileDescriptor7 = []byte{
+var fileDescriptor8 = []byte{
 	// 409 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x74, 0x52, 0xbd, 0x6e, 0xdb, 0x30,
 	0x10, 0x86, 0x2c, 0xcb, 0xb6, 0x4e, 0x49, 0xeb, 0x30, 0x0b, 0x87, 0x0e, 0x2e, 0xbb, 0x78, 0x32,

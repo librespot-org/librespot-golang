@@ -27,7 +27,7 @@ type DecorationData struct {
 func (m *DecorationData) Reset()                    { *m = DecorationData{} }
 func (m *DecorationData) String() string            { return proto.CompactTextString(m) }
 func (*DecorationData) ProtoMessage()               {}
-func (*DecorationData) Descriptor() ([]byte, []int) { return fileDescriptor8, []int{0} }
+func (*DecorationData) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{0} }
 
 func (m *DecorationData) GetUsername() string {
 	if m != nil && m.Username != nil {
@@ -82,7 +82,7 @@ func init() {
 	proto.RegisterType((*DecorationData)(nil), "Spotify.DecorationData")
 }
 
-var fileDescriptor8 = []byte{
+var fileDescriptor9 = []byte{
 	// 158 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x44, 0xcb, 0x4d, 0x0a, 0xc2, 0x30,
 	0x10, 0x40, 0x61, 0xaa, 0x68, 0xdb, 0xa1, 0xf8, 0x13, 0x04, 0xbb, 0x14, 0x57, 0xae, 0x3c, 0x45,

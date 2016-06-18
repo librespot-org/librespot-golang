@@ -23,7 +23,7 @@ type Subscription struct {
 func (m *Subscription) Reset()                    { *m = Subscription{} }
 func (m *Subscription) String() string            { return proto.CompactTextString(m) }
 func (*Subscription) ProtoMessage()               {}
-func (*Subscription) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{0} }
+func (*Subscription) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{0} }
 
 func (m *Subscription) GetUri() string {
 	if m != nil && m.Uri != nil {
@@ -50,7 +50,7 @@ func init() {
 	proto.RegisterType((*Subscription)(nil), "Spotify.Subscription")
 }
 
-var fileDescriptor6 = []byte{
+var fileDescriptor7 = []byte{
 	// 109 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0xe2, 0x29, 0x28, 0x4d, 0x2a,
 	0x2e, 0x4d, 0xd2, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x0f, 0x2e, 0xc8, 0x2f, 0xc9, 0x4c,

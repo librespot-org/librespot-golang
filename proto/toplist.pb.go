@@ -21,7 +21,7 @@ type Toplist struct {
 func (m *Toplist) Reset()                    { *m = Toplist{} }
 func (m *Toplist) String() string            { return proto.CompactTextString(m) }
 func (*Toplist) ProtoMessage()               {}
-func (*Toplist) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{0} }
+func (*Toplist) Descriptor() ([]byte, []int) { return fileDescriptor11, []int{0} }
 
 func (m *Toplist) GetItems() []string {
 	if m != nil {
@@ -34,7 +34,7 @@ func init() {
 	proto.RegisterType((*Toplist)(nil), "Spotify.Toplist")
 }
 
-var fileDescriptor10 = []byte{
+var fileDescriptor11 = []byte{
 	// 70 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0xe2, 0x2d, 0xc9, 0x2f, 0xc8,
 	0xc9, 0x2c, 0x2e, 0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x0f, 0x2e, 0xc8, 0x2f, 0xc9,

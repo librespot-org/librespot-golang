@@ -96,7 +96,7 @@ func (x *MessageType) UnmarshalJSON(data []byte) error {
 	*x = MessageType(value)
 	return nil
 }
-func (MessageType) EnumDescriptor() ([]byte, []int) { return fileDescriptor9, []int{0} }
+func (MessageType) EnumDescriptor() ([]byte, []int) { return fileDescriptor10, []int{0} }
 
 type CapabilityType int32
 
@@ -151,7 +151,7 @@ func (x *CapabilityType) UnmarshalJSON(data []byte) error {
 	*x = CapabilityType(value)
 	return nil
 }
-func (CapabilityType) EnumDescriptor() ([]byte, []int) { return fileDescriptor9, []int{1} }
+func (CapabilityType) EnumDescriptor() ([]byte, []int) { return fileDescriptor10, []int{1} }
 
 type PlayStatus int32
 
@@ -191,7 +191,7 @@ func (x *PlayStatus) UnmarshalJSON(data []byte) error {
 	*x = PlayStatus(value)
 	return nil
 }
-func (PlayStatus) EnumDescriptor() ([]byte, []int) { return fileDescriptor9, []int{2} }
+func (PlayStatus) EnumDescriptor() ([]byte, []int) { return fileDescriptor10, []int{2} }
 
 type Frame struct {
 	Version            *uint32      `protobuf:"varint,1,opt,name=version" json:"version,omitempty"`
@@ -213,7 +213,7 @@ type Frame struct {
 func (m *Frame) Reset()                    { *m = Frame{} }
 func (m *Frame) String() string            { return proto.CompactTextString(m) }
 func (*Frame) ProtoMessage()               {}
-func (*Frame) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{0} }
+func (*Frame) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{0} }
 
 func (m *Frame) GetVersion() uint32 {
 	if m != nil && m.Version != nil {
@@ -324,7 +324,7 @@ type DeviceState struct {
 func (m *DeviceState) Reset()                    { *m = DeviceState{} }
 func (m *DeviceState) String() string            { return proto.CompactTextString(m) }
 func (*DeviceState) ProtoMessage()               {}
-func (*DeviceState) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{1} }
+func (*DeviceState) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{1} }
 
 func (m *DeviceState) GetSwVersion() string {
 	if m != nil && m.SwVersion != nil {
@@ -413,7 +413,7 @@ type Capability struct {
 func (m *Capability) Reset()                    { *m = Capability{} }
 func (m *Capability) String() string            { return proto.CompactTextString(m) }
 func (*Capability) ProtoMessage()               {}
-func (*Capability) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{2} }
+func (*Capability) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{2} }
 
 func (m *Capability) GetTyp() CapabilityType {
 	if m != nil && m.Typ != nil {
@@ -444,7 +444,7 @@ type Goodbye struct {
 func (m *Goodbye) Reset()                    { *m = Goodbye{} }
 func (m *Goodbye) String() string            { return proto.CompactTextString(m) }
 func (*Goodbye) ProtoMessage()               {}
-func (*Goodbye) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{3} }
+func (*Goodbye) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{3} }
 
 func (m *Goodbye) GetReason() string {
 	if m != nil && m.Reason != nil {
@@ -475,7 +475,7 @@ type State struct {
 func (m *State) Reset()                    { *m = State{} }
 func (m *State) String() string            { return proto.CompactTextString(m) }
 func (*State) ProtoMessage()               {}
-func (*State) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{4} }
+func (*State) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{4} }
 
 func (m *State) GetContextUri() string {
 	if m != nil && m.ContextUri != nil {
@@ -593,7 +593,7 @@ type TrackRef struct {
 func (m *TrackRef) Reset()                    { *m = TrackRef{} }
 func (m *TrackRef) String() string            { return proto.CompactTextString(m) }
 func (*TrackRef) ProtoMessage()               {}
-func (*TrackRef) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{5} }
+func (*TrackRef) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{5} }
 
 func (m *TrackRef) GetGid() []byte {
 	if m != nil {
@@ -639,7 +639,7 @@ type Ad struct {
 func (m *Ad) Reset()                    { *m = Ad{} }
 func (m *Ad) String() string            { return proto.CompactTextString(m) }
 func (*Ad) ProtoMessage()               {}
-func (*Ad) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{6} }
+func (*Ad) Descriptor() ([]byte, []int) { return fileDescriptor10, []int{6} }
 
 func (m *Ad) GetNext() int32 {
 	if m != nil && m.Next != nil {
@@ -717,7 +717,7 @@ func init() {
 	proto.RegisterEnum("Spotify.PlayStatus", PlayStatus_name, PlayStatus_value)
 }
 
-var fileDescriptor9 = []byte{
+var fileDescriptor10 = []byte{
 	// 1068 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x6c, 0x55, 0xcf, 0x72, 0xdb, 0xb6,
 	0x13, 0xfe, 0x49, 0xb4, 0x22, 0x09, 0xfa, 0x63, 0x98, 0x96, 0x6c, 0xfa, 0xdf, 0xfc, 0x1c, 0xa5,

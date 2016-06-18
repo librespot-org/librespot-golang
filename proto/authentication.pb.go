@@ -12,6 +12,7 @@ It is generated from these files:
 	keyexchange.proto
 	mercury.proto
 	mergedprofile.proto
+	metadata.proto
 	pubsub.proto
 	radio.proto
 	social.proto
@@ -111,6 +112,22 @@ It has these top-level messages:
 	UserField
 	MergedProfileRequest
 	MergedProfileReply
+	TopTracks
+	ActivityPeriod
+	Artist
+	AlbumGroup
+	Date
+	Album
+	Track
+	Image
+	ImageGroup
+	Biography
+	Disc
+	Copyright
+	Restriction
+	SalePeriod
+	ExternalId
+	AudioFile
 	Subscription
 	RadioRequest
 	MultiSeedRequest
