@@ -107,7 +107,7 @@ func (m *mercuryManager) request(req mercuryRequest, cb responseCallback) (err e
 	return nil
 }
 
-func encodeRequest(seq []byte, req mercuryRequest) ([]byte, error) {
+func encodeMercuryHead(seq []byte, partsLength uint16, flags uint8) (*bytes.Buffer, error) {
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.BigEndian, uint16(len(seq)))
 	if err != nil {
@@ -117,12 +117,20 @@ func encodeRequest(seq []byte, req mercuryRequest) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = binary.Write(buf, binary.BigEndian, uint8(1))
+	err = binary.Write(buf, binary.BigEndian, uint8(flags))
 	if err != nil {
 		return nil, err
 	}
-	err = binary.Write(buf, binary.BigEndian,
-		uint16(1+len(req.payload)))
+	err = binary.Write(buf, binary.BigEndian, partsLength)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf, nil
+}
+
+func encodeRequest(seq []byte, req mercuryRequest) ([]byte, error) {
+	buf, err := encodeMercuryHead(seq, uint16(1+len(req.payload)), uint8(1))
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +196,6 @@ func handleHead(reader io.Reader) (seq []byte, flags uint8, count uint16, err er
 }
 
 func (m *mercuryManager) handle(cmd uint8, reader io.Reader) (err error) {
-
 	seq, flags, count, err := handleHead(reader)
 	if err != nil {
 		return
