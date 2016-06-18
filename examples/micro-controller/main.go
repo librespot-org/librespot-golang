@@ -2,17 +2,17 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"github.com/badfortrains/spotcontrol"
-	"strings"
-	"strconv"
-	"flag"
 	"os"
+	"strconv"
+	"strings"
 )
 
 const defaultdevicename = "SpotControl"
 
-func chooseDevice(controller *spotcontrol.SpircController, reader *bufio.Reader) string{
+func chooseDevice(controller *spotcontrol.SpircController, reader *bufio.Reader) string {
 	devices := controller.ListDevices()
 	if len(devices) == 0 {
 		fmt.Println("no devices")
@@ -23,12 +23,12 @@ func chooseDevice(controller *spotcontrol.SpircController, reader *bufio.Reader)
 	for i, d := range devices {
 		fmt.Printf("%v) %v %v \n", i, d.Name, d.Ident)
 	}
-	
+
 	for {
 		fmt.Print("Enter device number: ")
 		text, _ := reader.ReadString('\n')
 		i, err := strconv.Atoi(strings.TrimSpace(text))
-		if err == nil && i < len(devices) && i >= 0{
+		if err == nil && i < len(devices) && i >= 0 {
 			return devices[i].Ident
 		}
 		fmt.Println("invalid device number")
@@ -36,7 +36,7 @@ func chooseDevice(controller *spotcontrol.SpircController, reader *bufio.Reader)
 	}
 }
 
-func getDevice(controller *spotcontrol.SpircController, ident string, reader *bufio.Reader) string{
+func getDevice(controller *spotcontrol.SpircController, ident string, reader *bufio.Reader) string {
 	if ident != "" {
 		return ident
 	} else {
@@ -59,7 +59,7 @@ func addMdns(controller *spotcontrol.SpircController, reader *bufio.Reader) {
 		fmt.Print("Enter device number: ")
 		text, _ := reader.ReadString('\n')
 		i, err := strconv.Atoi(strings.TrimSpace(text))
-		if err == nil && i < len(devices) && i >= 0{
+		if err == nil && i < len(devices) && i >= 0 {
 			url = devices[i].Url
 			break
 		}
@@ -70,7 +70,7 @@ func addMdns(controller *spotcontrol.SpircController, reader *bufio.Reader) {
 
 }
 
-func printHelp(){
+func printHelp() {
 	fmt.Println("\nAvailable commands:")
 	fmt.Println("load <track1> [...more tracks]: load tracks by spotify base 62 id")
 	fmt.Println("hello:                          ask devices to identify themselves")
@@ -81,7 +81,6 @@ func printHelp(){
 	fmt.Println("help:                           show this list\n")
 }
 
-
 func main() {
 	username := flag.String("username", "", "spotify username")
 	password := flag.String("password", "", "spotify password")
@@ -91,7 +90,7 @@ func main() {
 	flag.Parse()
 
 	var sController *spotcontrol.SpircController
-	if *username != "" && *password != ""{
+	if *username != "" && *password != "" {
 		sController = spotcontrol.Login(*username, *password, *appkey, *devicename)
 	} else if *blobPath != "" {
 		if _, err := os.Stat(*blobPath); os.IsNotExist(err) {
@@ -113,7 +112,7 @@ func main() {
 	for {
 		fmt.Print("Enter a command: ")
 		text, _ := reader.ReadString('\n')
-		cmds := strings.Split(strings.TrimSpace(text),  " ")
+		cmds := strings.Split(strings.TrimSpace(text), " ")
 
 		switch {
 		case cmds[0] == "load":
@@ -139,6 +138,10 @@ func main() {
 			addMdns(sController, reader)
 		case cmds[0] == "help":
 			printHelp()
+		case cmds[0] == "search" && len(cmds) > 1:
+			sController.Search(strings.Join(cmds[1:], " "))
+		case cmds[0] == "suggest" && len(cmds) > 1:
+			sController.Suggest(strings.Join(cmds[1:], " "))
 		}
 	}
 
