@@ -1,9 +1,13 @@
 package spotcontrol
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	Spotify "github.com/badfortrains/spotcontrol/proto"
+	"github.com/golang/protobuf/proto"
 	"net/url"
+	"regexp"
 )
 
 type Artist struct {
@@ -20,7 +24,7 @@ type Album struct {
 }
 
 type Track struct {
-	Albums     Album    `json:"album"`
+	Album      Album    `json:"album"`
 	Artists    []Artist `json:"artists"`
 	Image      string   `json:"image"`
 	Name       string   `json:"name"`
@@ -70,6 +74,7 @@ func (c *SpircController) Search(search string) {
 			fmt.Println("err", err)
 		}
 
+		fmt.Println(string(res.combinePayload()))
 		for _, a := range result.Artists.Hits {
 			fmt.Println(a.Name)
 		}
@@ -131,5 +136,29 @@ func (c *SpircController) Suggest(search string) {
 		result := parseSuggest(res.combinePayload())
 
 		fmt.Println(result.Artists)
+
+		var spotifyId = regexp.MustCompile(`spotify:.+:(.+)`)
+		matches := spotifyId.FindStringSubmatch(result.Tracks[0].Uri)
+		c.GetTrack(hex.EncodeToString(convert62(matches[1])))
 	})
+}
+
+func (c *SpircController) GetTrack(id string) {
+	url := "hm://metadata/3/track/" + id
+	c.session.mercurySendRequest(mercuryRequest{
+		method:  "GET",
+		uri:     url,
+		payload: [][]byte{},
+	}, func(res mercuryResponse) {
+
+		track := &Spotify.Track{}
+		err := proto.Unmarshal(res.payload[0], track)
+
+		if err != nil {
+			fmt.Println("error unmarshaling track")
+		}
+
+		fmt.Println("track", *track.Name)
+	})
+
 }
