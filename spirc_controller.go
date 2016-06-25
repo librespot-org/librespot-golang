@@ -26,7 +26,7 @@ type ConnectDevice struct {
 	Name   string
 	Ident  string
 	Url    string
-	Volume uint32
+	Volume int
 }
 
 // Starts controller.  Registers listeners for Spotify connect device
@@ -106,7 +106,7 @@ func (c *SpircController) SendPause(ident string) {
 	c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePause)
 }
 
-func (c *SpircController) SendVolume(ident string, volume uint32) {
+func (c *SpircController) SendVolume(ident string, volume int) {
 	c.seqNr += 1
 	messageType := Spotify.MessageType_kMessageTypeVolume
 	frame := &Spotify.Frame{
@@ -116,7 +116,7 @@ func (c *SpircController) SendVolume(ident string, volume uint32) {
 		SeqNr:           proto.Uint32(c.seqNr),
 		Typ:             &messageType,
 		Recipient:       []string{ident},
-		Volume:          proto.Uint32(volume),
+		Volume:          proto.Uint32(uint32(volume)),
 	}
 
 	c.sendFrame(frame)
@@ -206,7 +206,7 @@ func (c *SpircController) run() {
 			c.devices[*frame.Ident] = ConnectDevice{
 				Name:   frame.DeviceState.GetName(),
 				Ident:  *frame.Ident,
-				Volume: frame.DeviceState.GetVolume(),
+				Volume: int(frame.DeviceState.GetVolume()),
 			}
 			c.devicesLock.Unlock()
 		} else if frame.GetTyp() == Spotify.MessageType_kMessageTypeGoodbye {
