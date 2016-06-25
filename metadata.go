@@ -1,13 +1,11 @@
 package spotcontrol
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"github.com/golang/protobuf/proto"
 	"net/url"
-	"regexp"
 )
 
 type Artist struct {
@@ -58,12 +56,14 @@ type SearchResult struct {
 		Hits  []Track `json:"hits"`
 		Total int     `json:"total"`
 	} `json:"tracks"`
+	Error error
 }
 
-func (c *SpircController) Search(search string) {
+func (c *SpircController) Search(search string) (*SearchResult, error) {
 	url := "hm://searchview/km/v2/search/" + url.QueryEscape(search) + "?limit=12&tracks-limit=100&catalogue=&country=US&locale=en&platform=zelda&username="
+	done := make(chan interface{})
 
-	c.session.mercurySendRequest(mercuryRequest{
+	go c.session.mercurySendRequest(mercuryRequest{
 		method:  "GET",
 		uri:     url,
 		payload: [][]byte{},
@@ -71,14 +71,19 @@ func (c *SpircController) Search(search string) {
 		result := &SearchResult{}
 		err := json.Unmarshal(res.combinePayload(), result)
 		if err != nil {
-			fmt.Println("err", err)
-		}
-
-		fmt.Println(string(res.combinePayload()))
-		for _, a := range result.Artists.Hits {
-			fmt.Println(a.Name)
+			done <- err
+		} else {
+			done <- result
 		}
 	})
+
+	result := <-done
+	v, ok := result.(*SearchResult)
+	if ok {
+		return v, nil
+	} else {
+		return nil, result.(error)
+	}
 }
 
 type SuggestResult struct {
@@ -90,9 +95,10 @@ type SuggestResult struct {
 	Artists []Album
 	Tracks  []Track
 	TopHits []TopHit
+	Error   error
 }
 
-func parseSuggest(body []byte) *SuggestResult {
+func parseSuggest(body []byte) (*SuggestResult, error) {
 	result := &SuggestResult{}
 	err := json.Unmarshal(body, result)
 	if err != nil {
@@ -111,10 +117,10 @@ func parseSuggest(body []byte) *SuggestResult {
 			err = json.Unmarshal(s.RawItems, &result.Tracks)
 		}
 		if err != nil {
-			fmt.Println("err", err)
+			return nil, err
 		}
 	}
-	return result
+	return result, nil
 }
 
 func (res *mercuryResponse) combinePayload() []byte {
@@ -125,22 +131,30 @@ func (res *mercuryResponse) combinePayload() []byte {
 	return body
 }
 
-func (c *SpircController) Suggest(search string) {
+func (c *SpircController) Suggest(search string) (*SuggestResult, error) {
 	url := "hm://searchview/km/v3/suggest/" + url.QueryEscape(search) + "?limit=3&intent=2516516747764520149&sequence=0&catalogue=&country=&locale=&platform=zelda&username="
+	done := make(chan interface{})
 
-	c.session.mercurySendRequest(mercuryRequest{
+	go c.session.mercurySendRequest(mercuryRequest{
 		method:  "GET",
 		uri:     url,
 		payload: [][]byte{},
 	}, func(res mercuryResponse) {
-		result := parseSuggest(res.combinePayload())
-
-		fmt.Println(result.Artists)
-
-		var spotifyId = regexp.MustCompile(`spotify:.+:(.+)`)
-		matches := spotifyId.FindStringSubmatch(result.Tracks[0].Uri)
-		c.GetTrack(hex.EncodeToString(convert62(matches[1])))
+		result, err := parseSuggest(res.combinePayload())
+		if err != nil {
+			done <- err
+		} else {
+			done <- result
+		}
 	})
+
+	result := <-done
+	v, ok := result.(*SuggestResult)
+	if ok {
+		return v, nil
+	} else {
+		return nil, result.(error)
+	}
 }
 
 func (c *SpircController) GetTrack(id string) {
@@ -150,7 +164,6 @@ func (c *SpircController) GetTrack(id string) {
 		uri:     url,
 		payload: [][]byte{},
 	}, func(res mercuryResponse) {
-
 		track := &Spotify.Track{}
 		err := proto.Unmarshal(res.payload[0], track)
 
