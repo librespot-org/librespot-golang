@@ -1,38 +1,28 @@
 package spotcontrol
 
-// #include "./shn.h"
-import "C"
-
 import (
 	"bytes"
 	"encoding/binary"
 	"io"
 	"log"
-	"unsafe"
 )
-
-type shnCtx C.shn_ctx
 
 type shannonStream struct {
 	sendNonce  uint32
-	sendCipher C.shn_ctx
+	sendCipher shn_ctx
+	recvCipher shn_ctx
 
-	recvNonce  uint32
-	recvCipher C.shn_ctx
-	reader     io.Reader
-	writer     io.Writer
+	recvNonce uint32
+	reader    io.Reader
+	writer    io.Writer
 }
 
-func setKey(ctx *C.shn_ctx, key []uint8) {
-	C.shn_key(ctx,
-		(*C.uchar)(unsafe.Pointer(&key[0])),
-		C.int(len(key)))
+func setKey(ctx *shn_ctx, key []uint8) {
+	shn_key(ctx, key, len(key))
 
 	nonce := make([]byte, 4)
 	binary.BigEndian.PutUint32(nonce, 0)
-	C.shn_nonce(ctx,
-		(*C.uchar)(unsafe.Pointer(&nonce[0])),
-		C.int(len(nonce)))
+	shn_nonce(ctx, nonce, len(nonce))
 }
 
 func setupStream(keys sharedKeys, conn plainConnection) packetStream {
@@ -43,6 +33,7 @@ func setupStream(keys sharedKeys, conn plainConnection) packetStream {
 
 	setKey(&s.recvCipher, keys.recvKey)
 	setKey(&s.sendCipher, keys.sendKey)
+
 	return s
 }
 
@@ -65,26 +56,16 @@ func cipherPacket(cmd uint8, data []byte) []byte {
 
 func (s *shannonStream) Encrypt(message string) []byte {
 	messageBytes := []byte(message)
-	C.shn_encrypt(&s.sendCipher,
-		(*C.uchar)(unsafe.Pointer(&messageBytes[0])),
-		C.int(len(messageBytes)))
-
-	return messageBytes
+	return s.EncryptBytes(messageBytes)
 }
 
 func (s *shannonStream) EncryptBytes(messageBytes []byte) []byte {
-	C.shn_encrypt(&s.sendCipher,
-		(*C.uchar)(unsafe.Pointer(&messageBytes[0])),
-		C.int(len(messageBytes)))
-
+	shn_encrypt(&s.sendCipher, messageBytes, len(messageBytes))
 	return messageBytes
 }
 
 func (s *shannonStream) Decrypt(messageBytes []byte) []byte {
-	C.shn_decrypt(&s.recvCipher,
-		(*C.uchar)(unsafe.Pointer(&messageBytes[0])),
-		C.int(len(messageBytes)))
-
+	shn_decrypt(&s.recvCipher, messageBytes, len(messageBytes))
 	return messageBytes
 }
 
@@ -110,16 +91,12 @@ func (s *shannonStream) Write(p []byte) (n int, err error) {
 func (s *shannonStream) FinishSend() (err error) {
 	count := 4
 	mac := make([]byte, count)
-	C.shn_finish(&s.sendCipher,
-		(*C.uchar)(unsafe.Pointer(&mac[0])),
-		C.int(count))
+	shn_finish(&s.sendCipher, mac, count)
 
 	s.sendNonce += 1
 	nonce := make([]uint8, 4)
 	binary.BigEndian.PutUint32(nonce, s.sendNonce)
-	C.shn_nonce(&s.sendCipher,
-		(*C.uchar)(unsafe.Pointer(&nonce[0])),
-		C.int(len(nonce)))
+	shn_nonce(&s.sendCipher, nonce, len(nonce))
 
 	_, err = s.writer.Write(mac)
 	return
@@ -132,21 +109,16 @@ func (s *shannonStream) finishRecv() {
 	io.ReadFull(s.reader, mac)
 
 	mac2 := make([]byte, count)
-	C.shn_finish(&s.recvCipher,
-		(*C.uchar)(unsafe.Pointer(&mac2[0])),
-		C.int(count))
+	shn_finish(&s.recvCipher, mac2, count)
 
 	if !bytes.Equal(mac, mac2) {
-		//log.Fatal("received mac doesn't match")
 		log.Println("received mac doesn't match")
 	}
 
 	s.recvNonce += 1
 	nonce := make([]uint8, 4)
 	binary.BigEndian.PutUint32(nonce, s.recvNonce)
-	C.shn_nonce(&s.recvCipher,
-		(*C.uchar)(unsafe.Pointer(&nonce[0])),
-		C.int(len(nonce)))
+	shn_nonce(&s.recvCipher, nonce, len(nonce))
 }
 
 func (s *shannonStream) RecvPacket() (cmd uint8, buf []byte, err error) {
