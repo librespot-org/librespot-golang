@@ -43,3 +43,27 @@ func (c *SpircController) ListMdnsDevicesJson() (string, error) {
 	}
 	return string(json), nil
 }
+
+func (c *SpircController) SuggestJson(term string) (string, error) {
+	result, err := c.Suggest(term)
+	if err != nil {
+		return "", nil
+	}
+	json, err := json.Marshal(result)
+	if err != nil {
+		return "", nil
+	}
+	return string(json), nil
+}
+
+func (c *SpircController) SearchJson(term string) (string, error) {
+	result, err := c.Search(term)
+	if err != nil {
+		return "", nil
+	}
+	json, err := json.Marshal(result)
+	if err != nil {
+		return "", nil
+	}
+	return string(json), nil
+}
