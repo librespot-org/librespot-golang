@@ -101,6 +101,8 @@ func (s *session) doLogin(packet []byte, username string) *SpircController {
 
 	//poll once for authentication response
 	s.poll()
+	//poll for acknowledge before loading - needed for gopherjs
+	s.poll()
 	go s.run()
 
 	return setupController(s, username)
@@ -116,7 +118,7 @@ func generateDeviceId(name string) string {
 func LoginWithKey(username string, password string, appkey []byte, deviceName string) *SpircController {
 	s := setupSession()
 
-	return s.loginSession(username, password, appkey, deviceName)
+	return s.LoginSession(username, password, appkey, deviceName)
 }
 
 //Login to spotify using username, password and app key file.
@@ -128,7 +130,7 @@ func Login(username string, password string, appkeyPath string, deviceName strin
 	return LoginWithKey(username, password, data, deviceName)
 }
 
-func (s *session) loginSession(username string, password string,
+func (s *session) LoginSession(username string, password string,
 	appkey []byte, deviceName string) *SpircController {
 	s.deviceId = generateDeviceId(deviceName)
 	s.deviceName = deviceName
@@ -145,6 +147,15 @@ func LoginBlob(username string, blob string, appkey []byte, deviceName string) *
 		DecodedBlob: blob,
 	}, "", deviceId, deviceName)
 	return sessionFromDiscovery(discovery, appkey)
+}
+
+func SetupSessionConn(con io.ReadWriter) *session {
+	return &session{
+		keys:               generateKeys(),
+		tcpCon:             con,
+		mercuryConstructor: setupMercury,
+		shannonConstructor: setupStream,
+	}
 }
 
 func setupSession() *session {
@@ -234,7 +245,8 @@ func (s *session) handle(cmd uint8, data []byte) {
 			log.Fatal("handle 0x4", err)
 		}
 	case cmd == 0x1b:
-	case 0xb2 <= cmd && cmd <= 0xb6:
+		// handle country code
+	case 0xb2 <= cmd && cmd <= 0xb6 || cmd == 0x1b:
 		err := s.mercury.handle(cmd, bytes.NewReader(data))
 		if err != nil {
 			log.Fatal("handle 0xbx", err)
@@ -303,8 +315,6 @@ func loginPacketPassword(appkey []byte, username, password, deviceId string) []b
 
 func loginPacket(appkey []byte, username string, authData []byte,
 	authType *Spotify.AuthenticationType, deviceId string) []byte {
-
-	fmt.Println("do login", deviceId)
 
 	packet := &Spotify.ClientResponseEncrypted{
 		LoginCredentials: &Spotify.LoginCredentials{

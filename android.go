@@ -10,6 +10,22 @@ type Updater interface {
 	OnUpdate(device string)
 }
 
+func (c *SpircController) HandleUpdatesCb(cb func(device string)) {
+	c.updateChan = make(chan Spotify.Frame, 5)
+
+	go func() {
+		for {
+			update := <-c.updateChan
+			json, err := json.Marshal(update)
+			if err != nil {
+				fmt.Println("Error marhsaling device json")
+			} else {
+				cb(string(json))
+			}
+		}
+	}()
+}
+
 func (c *SpircController) HandleUpdates(u Updater) {
 	c.updateChan = make(chan Spotify.Frame, 5)
 

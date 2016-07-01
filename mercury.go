@@ -198,6 +198,7 @@ func handleHead(reader io.Reader) (seq []byte, flags uint8, count uint16, err er
 func (m *mercuryManager) handle(cmd uint8, reader io.Reader) (err error) {
 	seq, flags, count, err := handleHead(reader)
 	if err != nil {
+		fmt.Println("error handling response", err)
 		return
 	}
 

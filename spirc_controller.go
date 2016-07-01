@@ -44,7 +44,6 @@ func setupController(userSession *session, username string) *SpircController {
 		ident:    userSession.deviceId,
 	}
 	go controller.run()
-	controller.SendHello()
 	return controller
 }
 
@@ -90,36 +89,38 @@ func (c *SpircController) LoadTrack(ident string, gids []string) {
 // Active devices will respond with a 'notify' updating
 // their state.
 func (c *SpircController) SendHello() {
-	c.sendCmd(nil, Spotify.MessageType_kMessageTypeHello)
+	go c.sendCmd(nil, Spotify.MessageType_kMessageTypeHello)
 }
 
 // Sends a 'play' command to spotify connect device with
 // given ident.
 func (c *SpircController) SendPlay(ident string) {
-	c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePlay)
+	go c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePlay)
 }
 
 // Sends a 'pause' command to spotify connect device with
 // given ident.
 func (c *SpircController) SendPause(ident string) {
-
-	c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePause)
+	go c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePause)
 }
 
 func (c *SpircController) SendVolume(ident string, volume int) {
-	c.seqNr += 1
-	messageType := Spotify.MessageType_kMessageTypeVolume
-	frame := &Spotify.Frame{
-		Version:         proto.Uint32(1),
-		Ident:           proto.String(c.ident),
-		ProtocolVersion: proto.String("2.0.0"),
-		SeqNr:           proto.Uint32(c.seqNr),
-		Typ:             &messageType,
-		Recipient:       []string{ident},
-		Volume:          proto.Uint32(uint32(volume)),
-	}
+	go func() {
+		c.seqNr += 1
+		messageType := Spotify.MessageType_kMessageTypeVolume
+		frame := &Spotify.Frame{
+			Version:         proto.Uint32(1),
+			Ident:           proto.String(c.ident),
+			ProtocolVersion: proto.String("2.0.0"),
+			SeqNr:           proto.Uint32(c.seqNr),
+			Typ:             &messageType,
+			Recipient:       []string{ident},
+			Volume:          proto.Uint32(uint32(volume)),
+		}
 
-	c.sendFrame(frame)
+		c.sendFrame(frame)
+	}()
+
 }
 
 // Connect to spotify-connect device at address (local network path).
@@ -184,6 +185,10 @@ func (c *SpircController) sendCmd(recipient []string, messageType Spotify.Messag
 	}
 
 	c.sendFrame(frame)
+}
+
+func (c *SpircController) DoSubscribe() {
+	go c.run()
 }
 
 func (c *SpircController) run() {
