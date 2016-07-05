@@ -1,3 +1,5 @@
+// +build js spotandroid
+
 package spotcontrol
 
 import (
