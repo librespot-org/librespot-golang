@@ -4,10 +4,27 @@ import (
 	"encoding/json"
 	"fmt"
 	Spotify "github.com/badfortrains/spotcontrol/proto"
+	"io"
 )
 
 type Updater interface {
 	OnUpdate(device string)
+}
+
+func LoginConnection(username string, password string,
+	appkey []byte, deviceName string, con io.ReadWriter) *SpircController {
+	s := &session{
+		keys:               generateKeys(),
+		tcpCon:             con,
+		mercuryConstructor: setupMercury,
+		shannonConstructor: setupStream,
+	}
+	s.deviceId = generateDeviceId(deviceName)
+	s.deviceName = deviceName
+
+	s.startConnection()
+	loginPacket := loginPacketPassword(appkey, username, password, s.deviceId)
+	return s.doLogin(loginPacket, username)
 }
 
 func (c *SpircController) HandleUpdatesCb(cb func(device string)) {

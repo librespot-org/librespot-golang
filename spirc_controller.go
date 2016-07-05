@@ -43,7 +43,7 @@ func setupController(userSession *session, username string) *SpircController {
 		username: username,
 		ident:    userSession.deviceId,
 	}
-	go controller.run()
+	controller.subscribe()
 	return controller
 }
 
@@ -187,14 +187,15 @@ func (c *SpircController) sendCmd(recipient []string, messageType Spotify.Messag
 	c.sendFrame(frame)
 }
 
-func (c *SpircController) DoSubscribe() {
-	go c.run()
+func (c *SpircController) subscribe() {
+	ch := make(chan mercuryResponse)
+	c.session.mercurySubscribe("hm://remote/user/"+c.username+"/", ch, func(_ mercuryResponse) {
+		go c.run(ch)
+		c.SendHello()
+	})
 }
 
-func (c *SpircController) run() {
-	ch := make(chan mercuryResponse)
-	c.session.mercurySubscribe("hm://remote/user/"+c.username+"/", ch)
-
+func (c *SpircController) run(ch chan mercuryResponse) {
 	for {
 		reponse := <-ch
 

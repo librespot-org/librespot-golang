@@ -21,7 +21,7 @@ const (
 )
 
 type mercuryCon interface {
-	Subscribe(uri string, recv chan mercuryResponse) error
+	Subscribe(uri string, recv chan mercuryResponse, cb responseCallback) error
 	request(req mercuryRequest, cb responseCallback) (err error)
 	handle(cmd uint8, reader io.Reader) (err error)
 }
@@ -118,7 +118,7 @@ func generateDeviceId(name string) string {
 func LoginWithKey(username string, password string, appkey []byte, deviceName string) *SpircController {
 	s := setupSession()
 
-	return s.LoginSession(username, password, appkey, deviceName)
+	return s.loginSession(username, password, appkey, deviceName)
 }
 
 //Login to spotify using username, password and app key file.
@@ -130,7 +130,7 @@ func Login(username string, password string, appkeyPath string, deviceName strin
 	return LoginWithKey(username, password, data, deviceName)
 }
 
-func (s *session) LoginSession(username string, password string,
+func (s *session) loginSession(username string, password string,
 	appkey []byte, deviceName string) *SpircController {
 	s.deviceId = generateDeviceId(deviceName)
 	s.deviceName = deviceName
@@ -147,15 +147,6 @@ func LoginBlob(username string, blob string, appkey []byte, deviceName string) *
 		DecodedBlob: blob,
 	}, "", deviceId, deviceName)
 	return sessionFromDiscovery(discovery, appkey)
-}
-
-func SetupSessionConn(con io.ReadWriter) *session {
-	return &session{
-		keys:               generateKeys(),
-		tcpCon:             con,
-		mercuryConstructor: setupMercury,
-		shannonConstructor: setupStream,
-	}
 }
 
 func setupSession() *session {
@@ -229,8 +220,8 @@ func (s *session) run() {
 	}
 }
 
-func (s *session) mercurySubscribe(uri string, responseCh chan mercuryResponse) error {
-	return s.mercury.Subscribe(uri, responseCh)
+func (s *session) mercurySubscribe(uri string, responseCh chan mercuryResponse, responseCb responseCallback) error {
+	return s.mercury.Subscribe(uri, responseCh, responseCb)
 }
 
 func (s *session) mercurySendRequest(request mercuryRequest, responseCb responseCallback) error {

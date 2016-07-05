@@ -22,8 +22,7 @@ func login(username, password, appkey string, cb *js.Object) {
 	go func() {
 		key, _ := base64.StdEncoding.DecodeString(appkey)
 		conn, _ := MakeConn()
-		s := spotcontrol.SetupSessionConn(conn)
-		sController := s.LoginSession(username, password, key, "spotcontrol")
+		sController := spotcontrol.LoginConnection(username, password, key, "spotcontrol", conn)
 		cb.Invoke(js.MakeWrapper(sController))
 	}()
 }

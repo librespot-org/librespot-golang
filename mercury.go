@@ -56,7 +56,7 @@ func (m *mercuryManager) addChanelSubscriber(uri string, recv chan mercuryRespon
 	m.subscriptions[uri] = chList
 }
 
-func (m *mercuryManager) Subscribe(uri string, recv chan mercuryResponse) error {
+func (m *mercuryManager) Subscribe(uri string, recv chan mercuryResponse, cb responseCallback) error {
 	m.addChanelSubscriber(uri, recv)
 	err := m.request(mercuryRequest{
 		method: "SUB",
@@ -69,6 +69,7 @@ func (m *mercuryManager) Subscribe(uri string, recv chan mercuryResponse) error 
 				m.addChanelSubscriber(*sub.Uri, recv)
 			}
 		}
+		cb(response)
 	})
 
 	return err
