@@ -163,6 +163,9 @@ func TestHello(t *testing.T) {
 
 	controller.SendHello()
 
+	//ignore subscribe packet
+	<-stream.sendPackets
+
 	packet := <-stream.sendPackets
 
 	if packet.cmd != 0xb2 {

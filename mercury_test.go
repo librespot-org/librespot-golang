@@ -24,6 +24,11 @@ func TestMultiPart(t *testing.T) {
 
 	controller := setupTestController(stream)
 
+	subHeader := &Spotify.Header{
+		Uri: proto.String("hm://searchview/km/v2/search/Future"),
+	}
+	subHeaderData, _ := proto.Marshal(subHeader)
+
 	header := &Spotify.Header{
 		Uri:         proto.String("hm://searchview/km/v2/search/Future"),
 		ContentType: proto.String("application/json; charset=UTF-8"),
@@ -32,7 +37,11 @@ func TestMultiPart(t *testing.T) {
 	body := []byte("{searchResults: {tracks: [], albums: [], tracks: []}}")
 
 	headerData, _ := proto.Marshal(header)
-	seq := []byte{0, 0, 0, 2}
+	seq := []byte{0, 0, 0, 1}
+
+	p0, _ := encodeMercuryHead([]byte{0, 0, 0, 0}, 1, 1)
+	binary.Write(p0, binary.BigEndian, uint16(len(subHeaderData)))
+	p0.Write(subHeaderData)
 
 	p1, _ := encodeMercuryHead(seq, 1, 0)
 	binary.Write(p1, binary.BigEndian, uint16(len(headerData)))
@@ -54,9 +63,11 @@ func TestMultiPart(t *testing.T) {
 		}
 	})
 
+	stream.recvPackets <- shanPacket{cmd: 0xb2, buf: p0.Bytes()}
 	stream.recvPackets <- shanPacket{cmd: 0xb2, buf: p1.Bytes()}
 	stream.recvPackets <- shanPacket{cmd: 0xb2, buf: p2.Bytes()}
 
+	controller.session.poll()
 	controller.session.poll()
 	controller.session.poll()
 
