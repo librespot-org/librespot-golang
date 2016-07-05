@@ -1,0 +1,21 @@
+{
+  "name": "Spotcontrol",
+  "sockets": {
+    "tcp" : {
+      "connect": "lon3-accesspoint-a57.ap.spotify.com:4070"
+    }
+  },
+  "description": "Spotcontrol in the browser",
+  "version": "0.1",
+  "manifest_version": 2,
+  "app": {
+    "background": {
+      "scripts": ["background.js"]
+    }
+  },
+  "permissions": [
+      "file://*/*",
+      "storage"
+  ]
+}
+  
