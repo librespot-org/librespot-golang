@@ -111,7 +111,14 @@ func TestLogin(t *testing.T) {
 	//Write initial server response to plain connection
 	conn.reader.Write(serverResponseData)
 
-	go s.loginSession("testUser", "123", make([]byte, 350), "myDevice")
+	result := make(chan []byte, 2)
+	go func() {
+		controller, authdata, err := s.loginSession("testUser", "123", make([]byte, 350), "myDevice")
+		if controller == nil || err != nil {
+			t.Errorf("bad return values")
+		}
+		result <- authdata
+	}()
 
 	//Get the login packet sent to the spotify server from spotcontrol
 	loginPacket := <-fakeShan.sendPackets
@@ -137,15 +144,23 @@ func TestLogin(t *testing.T) {
 	}
 
 	welcome := &Spotify.APWelcome{
-		CanonicalUsername:           proto.String("testUser"),
+		CanonicalUsername:           proto.String("testUserCanonical"),
 		AccountTypeLoggedIn:         Spotify.AccountType_Spotify.Enum(),
 		CredentialsTypeLoggedIn:     Spotify.AccountType_Spotify.Enum(),
 		ReusableAuthCredentialsType: Spotify.AuthenticationType_AUTHENTICATION_USER_PASS.Enum(),
-		ReusableAuthCredentials:     []byte{},
+		ReusableAuthCredentials:     []byte{0, 1, 2},
 	}
 	welcomeData, _ := proto.Marshal(welcome)
 
 	fakeShan.recvPackets <- shanPacket{cmd: 0xac, buf: welcomeData}
+	// country code
+	fakeShan.recvPackets <- shanPacket{cmd: 0x1b, buf: []byte{0, 1}}
+	// ignore subscribe
+	<-fakeShan.sendPackets
+	welcomeRes := <-result
+	if !bytes.Equal(welcomeRes, []byte{0, 1, 2}) {
+		t.Errorf("Wrong authdata returned.  Got %v", welcomeRes)
+	}
 }
 
 func TestHello(t *testing.T) {

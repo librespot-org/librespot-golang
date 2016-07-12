@@ -93,19 +93,22 @@ func (s *session) startConnection() {
 	s.mercury = s.mercuryConstructor(s)
 }
 
-func (s *session) doLogin(packet []byte, username string) *SpircController {
+func (s *session) doLogin(packet []byte, username string) (*SpircController, []byte, error) {
 	err := s.stream.SendPacket(0xab, packet)
 	if err != nil {
 		log.Fatal("bad shannon write", err)
 	}
 
 	//poll once for authentication response
-	s.poll()
+	welcome, err := s.handleLogin()
+	if err != nil {
+		return nil, nil, err
+	}
 	//poll for acknowledge before loading - needed for gopherjs
 	s.poll()
 	go s.run()
 
-	return setupController(s, username)
+	return setupController(s, welcome.GetCanonicalUsername()), welcome.GetReusableAuthCredentials(), nil
 }
 
 func generateDeviceId(name string) string {
@@ -115,14 +118,25 @@ func generateDeviceId(name string) string {
 }
 
 //Login to spotify with supplied byte slice for app key
-func LoginWithKey(username string, password string, appkey []byte, deviceName string) *SpircController {
+func LoginWithKey(username string, password string, appkey []byte, deviceName string) (*SpircController, []byte, error) {
 	s := setupSession()
 
 	return s.loginSession(username, password, appkey, deviceName)
 }
 
+func LoginSaved(username string, authData []byte, appkey []byte, deviceName string) (*SpircController, []byte, error) {
+	s := setupSession()
+	s.deviceId = generateDeviceId(deviceName)
+	s.deviceName = deviceName
+
+	s.startConnection()
+	packet := loginPacket(appkey, username, authData,
+		Spotify.AuthenticationType_AUTHENTICATION_STORED_SPOTIFY_CREDENTIALS.Enum(), s.deviceId)
+	return s.doLogin(packet, username)
+}
+
 //Login to spotify using username, password and app key file.
-func Login(username string, password string, appkeyPath string, deviceName string) *SpircController {
+func Login(username string, password string, appkeyPath string, deviceName string) (*SpircController, []byte, error) {
 	data, err := ioutil.ReadFile(appkeyPath)
 	if err != nil {
 		log.Fatal("failed to open spotify appkey file")
@@ -131,7 +145,7 @@ func Login(username string, password string, appkeyPath string, deviceName strin
 }
 
 func (s *session) loginSession(username string, password string,
-	appkey []byte, deviceName string) *SpircController {
+	appkey []byte, deviceName string) (*SpircController, []byte, error) {
 	s.deviceId = generateDeviceId(deviceName)
 	s.deviceName = deviceName
 
@@ -140,7 +154,7 @@ func (s *session) loginSession(username string, password string,
 	return s.doLogin(loginPacket, username)
 }
 
-func LoginBlob(username string, blob string, appkey []byte, deviceName string) *SpircController {
+func LoginBlob(username string, blob string, appkey []byte, deviceName string) (*SpircController, []byte, error) {
 	deviceId := generateDeviceId(deviceName)
 	discovery := discoveryFromBlob(BlobInfo{
 		Username:    username,
@@ -167,7 +181,7 @@ func setupSession() *session {
 	}
 }
 
-func sessionFromDiscovery(d *discovery, appkey []byte) *SpircController {
+func sessionFromDiscovery(d *discovery, appkey []byte) (*SpircController, []byte, error) {
 	s := setupSession()
 	s.discovery = d
 	s.deviceId = d.deviceId
@@ -183,7 +197,7 @@ func sessionFromDiscovery(d *discovery, appkey []byte) *SpircController {
 //in file at cacheBlobPath.
 //Once saved, the blob credentials allow the program
 //to connect to other spotify connect devices and control them.
-func LoginDiscovery(cacheBlobPath, appkeyPath string, deviceName string) *SpircController {
+func LoginDiscovery(cacheBlobPath, appkeyPath string, deviceName string) (*SpircController, []byte, error) {
 	deviceId := generateDeviceId(deviceName)
 	discovery := loginFromConnect(cacheBlobPath, deviceId, deviceName)
 	appkey, err := ioutil.ReadFile(appkeyPath)
@@ -195,7 +209,7 @@ func LoginDiscovery(cacheBlobPath, appkeyPath string, deviceName string) *SpircC
 
 //Login from credentials at cacheBlobPath previously saved
 //by LoginDiscovery.
-func LoginBlobFile(cacheBlobPath, appkeyPath string, deviceName string) *SpircController {
+func LoginBlobFile(cacheBlobPath, appkeyPath string, deviceName string) (*SpircController, []byte, error) {
 	deviceId := generateDeviceId(deviceName)
 	discovery := loginFromFile(cacheBlobPath, deviceId, deviceName)
 	appkey, err := ioutil.ReadFile(appkeyPath)
@@ -228,6 +242,28 @@ func (s *session) mercurySendRequest(request mercuryRequest, responseCb response
 	return s.mercury.request(request, responseCb)
 }
 
+func (s *session) handleLogin() (*Spotify.APWelcome, error) {
+	cmd, data, err := s.stream.RecvPacket()
+	if err != nil {
+		return nil, fmt.Errorf("Authentication failed: %v", err)
+	}
+
+	if cmd == 0xad {
+		return nil, fmt.Errorf("Authentication failed")
+	} else if cmd == 0xac {
+		welcome := &Spotify.APWelcome{}
+		err := proto.Unmarshal(data, welcome)
+		if err != nil {
+			return nil, fmt.Errorf("Authentication failed: %v", err)
+		}
+		fmt.Println("Authentication succeedded: ", welcome.GetCanonicalUsername())
+		fmt.Println("got type", welcome.GetReusableAuthCredentialsType())
+		return welcome, nil
+	} else {
+		return nil, fmt.Errorf("Authentication failed: unexpected cmd %v", cmd)
+	}
+}
+
 func (s *session) handle(cmd uint8, data []byte) {
 	switch {
 	case cmd == 0x4:
@@ -242,16 +278,6 @@ func (s *session) handle(cmd uint8, data []byte) {
 		if err != nil {
 			log.Fatal("handle 0xbx", err)
 		}
-	case cmd == 0xac:
-		welcome := &Spotify.APWelcome{}
-		err := proto.Unmarshal(data, welcome)
-		if err != nil {
-			log.Fatal("handle 0xac", err)
-		}
-		fmt.Println("Authentication succeedded: ", welcome.GetCanonicalUsername())
-
-	case cmd == 0xad:
-		fmt.Println("Authentication failed")
 	default:
 	}
 }

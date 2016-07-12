@@ -14,7 +14,7 @@ type Updater interface {
 }
 
 func LoginConnection(username string, password string,
-	appkey []byte, deviceName string, con io.ReadWriter) *SpircController {
+	appkey []byte, deviceName string, con io.ReadWriter) (*SpircController, []byte, error) {
 	s := &session{
 		keys:               generateKeys(),
 		tcpCon:             con,
@@ -27,6 +27,23 @@ func LoginConnection(username string, password string,
 	s.startConnection()
 	loginPacket := loginPacketPassword(appkey, username, password, s.deviceId)
 	return s.doLogin(loginPacket, username)
+}
+
+func LoginConnectionSaved(username string, authData []byte,
+	appkey []byte, deviceName string, con io.ReadWriter) (*SpircController, []byte, error) {
+	s := &session{
+		keys:               generateKeys(),
+		tcpCon:             con,
+		mercuryConstructor: setupMercury,
+		shannonConstructor: setupStream,
+	}
+	s.deviceId = generateDeviceId(deviceName)
+	s.deviceName = deviceName
+
+	s.startConnection()
+	packet := loginPacket(appkey, username, authData,
+		Spotify.AuthenticationType_AUTHENTICATION_STORED_SPOTIFY_CREDENTIALS.Enum(), s.deviceId)
+	return s.doLogin(packet, username)
 }
 
 func (c *SpircController) HandleUpdatesCb(cb func(device string)) {

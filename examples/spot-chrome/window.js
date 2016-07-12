@@ -113,10 +113,7 @@ function listenCommands(){
 				password: $("#password").val(),
 				appkey: reader.result.replace('data:;base64,','')
 			}
-			if (doSave) {
-				chrome.storage.local.set(loginData)
-			}
-			doLogin(loginData)
+			doLogin(loginData, doSave)
 		})
 
 		const file = $('input[type=file]')[0].files[0];
@@ -125,20 +122,31 @@ function listenCommands(){
 }
 
 function saveLogin(loginData) {
-	chrome.storage.sync.set({
-		username: username,
-		password: password,
-		appkey: key
+	chrome.storage.local.set({
+		username: loginData.username,
+		authData: loginData.authData,
+		appkey: loginData.appkey
 	})
 }
 
-function doLogin(loginData) {
-	spotcontrol.login(loginData.username, loginData.password, loginData.appkey, controller => {
-		appState.loggedIn = true;
-		renderAll();
-		window.controller = controller
-		controller.HandleUpdatesCb(handleUpdates)
-	})
+function doLogin(loginData, doSave) {
+	if(loginData.authData) {
+		spotcontrol.loginSaved(loginData.username, loginData.authData, loginData.appkey, controller => {
+			appState.loggedIn = true;
+			renderAll();
+			window.controller = controller
+			controller.HandleUpdatesCb(handleUpdates)
+		})
+	} else {
+		spotcontrol.login(loginData.username, loginData.password, loginData.appkey, (controller, authData, err) => {
+			loginData.authData = authData;
+			doSave && saveLogin(loginData);
+			appState.loggedIn = true;
+			renderAll();
+			window.controller = controller
+			controller.HandleUpdatesCb(handleUpdates)
+		})
+	}
 }
 
 function renderComponent(section, content){
@@ -201,8 +209,8 @@ function handleUpdates(update){
 
 $(document).ready(function(){
 	listenCommands()
-	chrome.storage.local.get(['username','password', 'appkey'], items =>{
-		if(items.username && items.password) {
+	chrome.storage.local.get(['username','authData', 'appkey'], items =>{
+		if(items.username && items.authData) {
 			doLogin(items)
 		} else {
 			renderAll()
