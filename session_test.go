@@ -176,7 +176,7 @@ func TestHello(t *testing.T) {
 	s.mercury = setupMercury(s)
 	controller := setupController(s, "fakeUser")
 
-	controller.SendHello()
+	go controller.SendHello()
 
 	//ignore subscribe packet
 	<-stream.sendPackets

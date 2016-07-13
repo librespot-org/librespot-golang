@@ -11,8 +11,9 @@ import (
 )
 
 type mercuryResponse struct {
-	uri     string
-	payload [][]byte
+	uri        string
+	payload    [][]byte
+	statusCode int32
 }
 
 type mercuryRequest struct {
@@ -249,8 +250,9 @@ func (m *mercuryManager) completeRequest(cmd uint8, pending mercuryPending) (err
 	}
 
 	response := mercuryResponse{
-		uri:     *header.Uri,
-		payload: pending.parts[1:],
+		uri:        *header.Uri,
+		payload:    pending.parts[1:],
+		statusCode: header.GetStatusCode(),
 	}
 
 	if cmd == 0xb5 {

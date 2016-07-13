@@ -238,8 +238,13 @@ func (s *session) mercurySubscribe(uri string, responseCh chan mercuryResponse, 
 	return s.mercury.Subscribe(uri, responseCh, responseCb)
 }
 
-func (s *session) mercurySendRequest(request mercuryRequest, responseCb responseCallback) error {
-	return s.mercury.request(request, responseCb)
+func (s *session) mercurySendRequest(request mercuryRequest, responseCb responseCallback) {
+	err := s.mercury.request(request, responseCb)
+	if err != nil && responseCb != nil {
+		responseCb(mercuryResponse{
+			statusCode: 500,
+		})
+	}
 }
 
 func (s *session) handleLogin() (*Spotify.APWelcome, error) {

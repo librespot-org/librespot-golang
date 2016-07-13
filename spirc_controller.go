@@ -4,7 +4,6 @@ import (
 	"fmt"
 	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"github.com/golang/protobuf/proto"
-	"log"
 	"strings"
 	"sync"
 )
@@ -48,13 +47,13 @@ func setupController(userSession *session, username string) *SpircController {
 }
 
 // Load comma seperated tracks
-func (c *SpircController) LoadTrackIds(ident string, ids string) {
-	c.LoadTrack(ident, strings.Split(ids, ","))
+func (c *SpircController) LoadTrackIds(ident string, ids string) error {
+	return c.LoadTrack(ident, strings.Split(ids, ","))
 }
 
 // Load given list of tracks on spotify connect device with given
 // ident.  Gids are formated base62 spotify ids.
-func (c *SpircController) LoadTrack(ident string, gids []string) {
+func (c *SpircController) LoadTrack(ident string, gids []string) error {
 	c.seqNr += 1
 
 	tracks := make([]*Spotify.TrackRef, 0, len(gids))
@@ -82,45 +81,42 @@ func (c *SpircController) LoadTrack(ident string, gids []string) {
 		State:           state,
 	}
 
-	c.sendFrame(frame)
+	return c.sendFrame(frame)
 }
 
 // Sends a 'hello' command to all spotify connect devices.
 // Active devices will respond with a 'notify' updating
 // their state.
-func (c *SpircController) SendHello() {
-	go c.sendCmd(nil, Spotify.MessageType_kMessageTypeHello)
+func (c *SpircController) SendHello() error {
+	return c.sendCmd(nil, Spotify.MessageType_kMessageTypeHello)
 }
 
 // Sends a 'play' command to spotify connect device with
 // given ident.
-func (c *SpircController) SendPlay(ident string) {
-	go c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePlay)
+func (c *SpircController) SendPlay(ident string) error {
+	return c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePlay)
 }
 
 // Sends a 'pause' command to spotify connect device with
 // given ident.
-func (c *SpircController) SendPause(ident string) {
-	go c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePause)
+func (c *SpircController) SendPause(ident string) error {
+	return c.sendCmd([]string{ident}, Spotify.MessageType_kMessageTypePause)
 }
 
-func (c *SpircController) SendVolume(ident string, volume int) {
-	go func() {
-		c.seqNr += 1
-		messageType := Spotify.MessageType_kMessageTypeVolume
-		frame := &Spotify.Frame{
-			Version:         proto.Uint32(1),
-			Ident:           proto.String(c.ident),
-			ProtocolVersion: proto.String("2.0.0"),
-			SeqNr:           proto.Uint32(c.seqNr),
-			Typ:             &messageType,
-			Recipient:       []string{ident},
-			Volume:          proto.Uint32(uint32(volume)),
-		}
+func (c *SpircController) SendVolume(ident string, volume int) error {
+	c.seqNr += 1
+	messageType := Spotify.MessageType_kMessageTypeVolume
+	frame := &Spotify.Frame{
+		Version:         proto.Uint32(1),
+		Ident:           proto.String(c.ident),
+		ProtocolVersion: proto.String("2.0.0"),
+		SeqNr:           proto.Uint32(c.seqNr),
+		Typ:             &messageType,
+		Recipient:       []string{ident},
+		Volume:          proto.Uint32(uint32(volume)),
+	}
 
-		c.sendFrame(frame)
-	}()
-
+	return c.sendFrame(frame)
 }
 
 // Connect to spotify-connect device at address (local network path).
@@ -157,23 +153,34 @@ func (c *SpircController) ListDevices() []ConnectDevice {
 	return res
 }
 
-func (c *SpircController) sendFrame(frame *Spotify.Frame) {
+func (c *SpircController) sendFrame(frame *Spotify.Frame) error {
 	frameData, err := proto.Marshal(frame)
 	if err != nil {
-		log.Fatal("could not Marshal request frame")
+		return fmt.Errorf("could not Marshal spirc request frame: ", err)
 	}
 
 	payload := make([][]byte, 1)
 	payload[0] = frameData
 
-	c.session.mercurySendRequest(mercuryRequest{
+	status := make(chan int32)
+
+	go c.session.mercurySendRequest(mercuryRequest{
 		method:  "SEND",
 		uri:     "hm://remote/user/" + c.username + "/",
 		payload: payload,
-	}, nil)
+	}, func(res mercuryResponse) {
+		status <- res.statusCode
+	})
+
+	code := <-status
+	if code >= 200 && code < 300 {
+		return nil
+	} else {
+		return fmt.Errorf("spirc send frame got mercury response, status code: %v", code)
+	}
 }
 
-func (c *SpircController) sendCmd(recipient []string, messageType Spotify.MessageType) {
+func (c *SpircController) sendCmd(recipient []string, messageType Spotify.MessageType) error {
 	c.seqNr += 1
 	frame := &Spotify.Frame{
 		Version:         proto.Uint32(1),
@@ -184,14 +191,14 @@ func (c *SpircController) sendCmd(recipient []string, messageType Spotify.Messag
 		Recipient:       recipient,
 	}
 
-	c.sendFrame(frame)
+	return c.sendFrame(frame)
 }
 
 func (c *SpircController) subscribe() {
 	ch := make(chan mercuryResponse)
 	c.session.mercurySubscribe("hm://remote/user/"+c.username+"/", ch, func(_ mercuryResponse) {
 		go c.run(ch)
-		c.SendHello()
+		go c.SendHello()
 	})
 }
 
