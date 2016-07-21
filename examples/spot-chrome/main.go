@@ -77,7 +77,7 @@ func loginSaved(username, authData string, appkey string, cb *js.Object) {
 		key, _ := base64.StdEncoding.DecodeString(appkey)
 		data, _ := base64.StdEncoding.DecodeString(authData)
 		conn, _ := MakeConn()
-		sController, _, err := spotcontrol.LoginConnectionSaved(username, data, key, "spotcontrol", conn)
+		sController, err := spotcontrol.LoginConnectionSaved(username, data, key, "spotcontrol", conn)
 		if err != nil {
 			cb.Invoke(nil, "", "login failed")
 		}
@@ -90,10 +90,11 @@ func login(username, password, appkey string, cb *js.Object) {
 	go func() {
 		key, _ := base64.StdEncoding.DecodeString(appkey)
 		conn, _ := MakeConn()
-		sController, authData, err := spotcontrol.LoginConnection(username, password, key, "spotcontrol", conn)
+		sController, err := spotcontrol.LoginConnection(username, password, key, "spotcontrol", conn)
 		if err != nil {
 			cb.Invoke(nil, "", "login failed")
 		} else {
+			authData := sController.SavedCredentials
 			c := &controllerWrapper{controller: sController}
 			cb.Invoke(js.MakeWrapper(c), base64.StdEncoding.EncodeToString(authData), nil)
 		}

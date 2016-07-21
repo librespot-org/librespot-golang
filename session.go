@@ -93,7 +93,7 @@ func (s *session) startConnection() {
 	s.mercury = s.mercuryConstructor(s)
 }
 
-func (s *session) doLogin(packet []byte, username string) (*SpircController, []byte, error) {
+func (s *session) doLogin(packet []byte, username string) (*SpircController, error) {
 	err := s.stream.SendPacket(0xab, packet)
 	if err != nil {
 		log.Fatal("bad shannon write", err)
@@ -102,13 +102,13 @@ func (s *session) doLogin(packet []byte, username string) (*SpircController, []b
 	//poll once for authentication response
 	welcome, err := s.handleLogin()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	//poll for acknowledge before loading - needed for gopherjs
 	s.poll()
 	go s.run()
 
-	return setupController(s, welcome.GetCanonicalUsername()), welcome.GetReusableAuthCredentials(), nil
+	return setupController(s, welcome.GetCanonicalUsername(), welcome.GetReusableAuthCredentials()), nil
 }
 
 func generateDeviceId(name string) string {
@@ -118,13 +118,13 @@ func generateDeviceId(name string) string {
 }
 
 //Login to spotify with supplied byte slice for app key
-func LoginWithKey(username string, password string, appkey []byte, deviceName string) (*SpircController, []byte, error) {
+func LoginWithKey(username string, password string, appkey []byte, deviceName string) (*SpircController, error) {
 	s := setupSession()
 
 	return s.loginSession(username, password, appkey, deviceName)
 }
 
-func LoginSaved(username string, authData []byte, appkey []byte, deviceName string) (*SpircController, []byte, error) {
+func LoginSaved(username string, authData []byte, appkey []byte, deviceName string) (*SpircController, error) {
 	s := setupSession()
 	s.deviceId = generateDeviceId(deviceName)
 	s.deviceName = deviceName
@@ -136,7 +136,7 @@ func LoginSaved(username string, authData []byte, appkey []byte, deviceName stri
 }
 
 //Login to spotify using username, password and app key file.
-func Login(username string, password string, appkeyPath string, deviceName string) (*SpircController, []byte, error) {
+func Login(username string, password string, appkeyPath string, deviceName string) (*SpircController, error) {
 	data, err := ioutil.ReadFile(appkeyPath)
 	if err != nil {
 		log.Fatal("failed to open spotify appkey file")
@@ -145,7 +145,7 @@ func Login(username string, password string, appkeyPath string, deviceName strin
 }
 
 func (s *session) loginSession(username string, password string,
-	appkey []byte, deviceName string) (*SpircController, []byte, error) {
+	appkey []byte, deviceName string) (*SpircController, error) {
 	s.deviceId = generateDeviceId(deviceName)
 	s.deviceName = deviceName
 
@@ -154,7 +154,7 @@ func (s *session) loginSession(username string, password string,
 	return s.doLogin(loginPacket, username)
 }
 
-func LoginBlob(username string, blob string, appkey []byte, deviceName string) (*SpircController, []byte, error) {
+func LoginBlob(username string, blob string, appkey []byte, deviceName string) (*SpircController, error) {
 	deviceId := generateDeviceId(deviceName)
 	discovery := discoveryFromBlob(BlobInfo{
 		Username:    username,
@@ -181,7 +181,7 @@ func setupSession() *session {
 	}
 }
 
-func sessionFromDiscovery(d *discovery, appkey []byte) (*SpircController, []byte, error) {
+func sessionFromDiscovery(d *discovery, appkey []byte) (*SpircController, error) {
 	s := setupSession()
 	s.discovery = d
 	s.deviceId = d.deviceId
@@ -197,7 +197,7 @@ func sessionFromDiscovery(d *discovery, appkey []byte) (*SpircController, []byte
 //in file at cacheBlobPath.
 //Once saved, the blob credentials allow the program
 //to connect to other spotify connect devices and control them.
-func LoginDiscovery(cacheBlobPath, appkeyPath string, deviceName string) (*SpircController, []byte, error) {
+func LoginDiscovery(cacheBlobPath, appkeyPath string, deviceName string) (*SpircController, error) {
 	deviceId := generateDeviceId(deviceName)
 	discovery := loginFromConnect(cacheBlobPath, deviceId, deviceName)
 	appkey, err := ioutil.ReadFile(appkeyPath)
@@ -209,7 +209,7 @@ func LoginDiscovery(cacheBlobPath, appkeyPath string, deviceName string) (*Spirc
 
 //Login from credentials at cacheBlobPath previously saved
 //by LoginDiscovery.
-func LoginBlobFile(cacheBlobPath, appkeyPath string, deviceName string) (*SpircController, []byte, error) {
+func LoginBlobFile(cacheBlobPath, appkeyPath string, deviceName string) (*SpircController, error) {
 	deviceId := generateDeviceId(deviceName)
 	discovery := loginFromFile(cacheBlobPath, deviceId, deviceName)
 	appkey, err := ioutil.ReadFile(appkeyPath)

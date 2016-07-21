@@ -113,11 +113,11 @@ func TestLogin(t *testing.T) {
 
 	result := make(chan []byte, 2)
 	go func() {
-		controller, authdata, err := s.loginSession("testUser", "123", make([]byte, 350), "myDevice")
+		controller, err := s.loginSession("testUser", "123", make([]byte, 350), "myDevice")
 		if controller == nil || err != nil {
 			t.Errorf("bad return values")
 		}
-		result <- authdata
+		result <- controller.SavedCredentials
 	}()
 
 	//Get the login packet sent to the spotify server from spotcontrol
@@ -174,7 +174,7 @@ func TestHello(t *testing.T) {
 		deviceId: "testDevice",
 	}
 	s.mercury = setupMercury(s)
-	controller := setupController(s, "fakeUser")
+	controller := setupController(s, "fakeUser", []byte{})
 
 	go controller.SendHello()
 

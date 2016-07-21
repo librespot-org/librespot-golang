@@ -92,12 +92,12 @@ func main() {
 	var sController *spotcontrol.SpircController
 	var err error
 	if *username != "" && *password != "" {
-		sController, _, err = spotcontrol.Login(*username, *password, *appkey, *devicename)
+		sController, err = spotcontrol.Login(*username, *password, *appkey, *devicename)
 	} else if *blobPath != "" {
 		if _, err = os.Stat(*blobPath); os.IsNotExist(err) {
-			sController, _, err = spotcontrol.LoginDiscovery(*blobPath, *appkey, *devicename)
+			sController, err = spotcontrol.LoginDiscovery(*blobPath, *appkey, *devicename)
 		} else {
-			sController, _, err = spotcontrol.LoginBlobFile(*blobPath, *appkey, *devicename)
+			sController, err = spotcontrol.LoginBlobFile(*blobPath, *appkey, *devicename)
 		}
 	} else {
 		fmt.Println("need to supply a username and password or a blob file path")

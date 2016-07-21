@@ -13,7 +13,7 @@ func setupTestController(stream packetStream) *SpircController {
 		deviceId: "testDevice",
 	}
 	s.mercury = setupMercury(s)
-	return setupController(s, "fakeUser")
+	return setupController(s, "fakeUser", []byte{})
 }
 
 func TestMultiPart(t *testing.T) {

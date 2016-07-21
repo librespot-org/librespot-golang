@@ -14,7 +14,7 @@ type Updater interface {
 }
 
 func LoginConnection(username string, password string,
-	appkey []byte, deviceName string, con io.ReadWriter) (*SpircController, []byte, error) {
+	appkey []byte, deviceName string, con io.ReadWriter) (*SpircController, error) {
 	s := &session{
 		keys:               generateKeys(),
 		tcpCon:             con,
@@ -30,7 +30,7 @@ func LoginConnection(username string, password string,
 }
 
 func LoginConnectionSaved(username string, authData []byte,
-	appkey []byte, deviceName string, con io.ReadWriter) (*SpircController, []byte, error) {
+	appkey []byte, deviceName string, con io.ReadWriter) (*SpircController, error) {
 	s := &session{
 		keys:               generateKeys(),
 		tcpCon:             con,

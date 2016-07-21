@@ -16,6 +16,8 @@ type SpircController struct {
 	devices     map[string]ConnectDevice
 	devicesLock sync.RWMutex
 	updateChan  chan Spotify.Frame
+
+	SavedCredentials []byte
 }
 
 // Represents an available spotify connect device.
@@ -30,17 +32,18 @@ type ConnectDevice struct {
 
 // Starts controller.  Registers listeners for Spotify connect device
 // updates, and opens connection for sending commands
-func setupController(userSession *session, username string) *SpircController {
+func setupController(userSession *session, username string, credentials []byte) *SpircController {
 	if username == "" &&
 		userSession.discovery.loginBlob.Username != "" {
 		username = userSession.discovery.loginBlob.Username
 	}
 
 	controller := &SpircController{
-		devices:  make(map[string]ConnectDevice),
-		session:  userSession,
-		username: username,
-		ident:    userSession.deviceId,
+		devices:          make(map[string]ConnectDevice),
+		session:          userSession,
+		username:         username,
+		ident:            userSession.deviceId,
+		SavedCredentials: credentials,
 	}
 	controller.subscribe()
 	return controller
