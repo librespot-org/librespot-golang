@@ -37,10 +37,6 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-type WORD uint32
-
-type UCHAR uint8
-
 type shn_ctx struct {
 	R     [N]uint32
 	CRC   [N]uint32
@@ -64,50 +60,50 @@ const N int = 16
 
 const FOLD int = 16
 
-const INITKONST uint32 = 0x6996c53a
+const initkonst uint32 = 0x6996c53a
 
 const KEYP int = 13
 
 /* some useful macros -- machine independent little-endian */
 
-func Byte(x uint32, i int) uint8 {
+func toByte(x uint32, i int) uint8 {
 	return uint8((x >> uint(8*i)) & 0xFF)
 }
 
-func ROTL(w uint32, x int) uint32 {
+func rotl(w uint32, x int) uint32 {
 	return w<<uint(x) | (w&0xffffffff)>>uint(32-x)
 }
 
-func BYTE2WORD(b []byte) uint32 {
+func byte2word(b []byte) uint32 {
 	return (uint32(b[3])&0xFF)<<24 | (uint32(b[2])&0xFF)<<16 | (uint32(b[1])&0xFF)<<8 | (uint32(b[0]) & 0xFF)
 }
 
-func WORD2BYTE(w uint32, b []byte) {
-	b[3] = byte(Byte(w, 3))
-	b[2] = byte(Byte(w, 2))
-	b[1] = byte(Byte(w, 1))
-	b[0] = byte(Byte(w, 0))
+func word2byte(w uint32, b []byte) {
+	b[3] = byte(toByte(w, 3))
+	b[2] = byte(toByte(w, 2))
+	b[1] = byte(toByte(w, 1))
+	b[0] = byte(toByte(w, 0))
 }
 
-func XORWORD(w uint32, b []byte) {
-	b[3] ^= byte(Byte(w, 3))
-	b[2] ^= byte(Byte(w, 2))
-	b[1] ^= byte(Byte(w, 1))
-	b[0] ^= byte(Byte(w, 0))
+func xorword(w uint32, b []byte) {
+	b[3] ^= byte(toByte(w, 3))
+	b[2] ^= byte(toByte(w, 2))
+	b[1] ^= byte(toByte(w, 1))
+	b[0] ^= byte(toByte(w, 0))
 }
 
 /* Nonlinear transform (sbox) of a word.
  * There are two slightly different combinations.
  */
 func sbox1(w uint32) uint32 {
-	w ^= ROTL(w, 5) | ROTL(w, 7)
-	w ^= ROTL(w, 19) | ROTL(w, 22)
+	w ^= rotl(w, 5) | rotl(w, 7)
+	w ^= rotl(w, 19) | rotl(w, 22)
 	return w
 }
 
 func sbox2(w uint32) uint32 {
-	w ^= ROTL(w, 7) | ROTL(w, 22)
-	w ^= ROTL(w, 5) | ROTL(w, 19)
+	w ^= rotl(w, 7) | rotl(w, 22)
+	w ^= rotl(w, 5) | rotl(w, 19)
 	return w
 }
 
@@ -120,7 +116,7 @@ func cycle(c *shn_ctx) {
 	/* nonlinear feedback function */
 	t = c.R[12] ^ c.R[13] ^ c.konst
 
-	t = sbox1(t) ^ ROTL(c.R[0], 1)
+	t = sbox1(t) ^ rotl(c.R[0], 1)
 
 	/* shift register */
 	for i = 1; i < N; i++ {
@@ -177,7 +173,7 @@ func shn_initstate(c *shn_ctx) {
 	for i = 2; i < N; i++ {
 		c.R[i] = c.R[i-1] + c.R[i-2]
 	}
-	c.konst = INITKONST
+	c.konst = initkonst
 }
 
 /* Save the current register state
@@ -208,9 +204,9 @@ func shn_genkonst(c *shn_ctx) {
 
 /* Load key material into the register
  */
-// #define ADDKEY(k) \
+// #define addkey(k) \
 // 	c->R[KEYP] ^= (k);
-func ADDKEY(c *shn_ctx, k uint32) {
+func addkey(c *shn_ctx, k uint32) {
 	c.R[KEYP] ^= k
 }
 
@@ -235,8 +231,8 @@ func shn_loadkey(c *shn_ctx, key []byte, keylen int) {
 
 	/* start folding in key */
 	for i = 0; i < keylen&^0x3; i += 4 {
-		k = BYTE2WORD(key[i:])
-		ADDKEY(c, k)
+		k = byte2word(key[i:])
+		addkey(c, k)
 		cycle(c)
 	}
 
@@ -249,13 +245,13 @@ func shn_loadkey(c *shn_ctx, key []byte, keylen int) {
 		for ; j < 4; j++ {
 			xtra[j] = 0
 		}
-		k = BYTE2WORD(xtra[:])
-		ADDKEY(c, k)
+		k = byte2word(xtra[:])
+		addkey(c, k)
 		cycle(c)
 	}
 
 	/* also fold in the length of the key */
-	ADDKEY(c, uint32(keylen))
+	addkey(c, uint32(keylen))
 
 	cycle(c)
 
@@ -287,7 +283,7 @@ func shn_key(c *shn_ctx, key []byte, keylen int) {
  */
 func shn_nonce(c *shn_ctx, nonce []byte, noncelen int) {
 	shn_reloadstate(c)
-	c.konst = INITKONST
+	c.konst = initkonst
 	shn_loadkey(c, nonce, noncelen)
 	shn_genkonst(c)
 	c.nbuf = 0
@@ -313,7 +309,7 @@ func shn_stream(c *shn_ctx, buf []byte, nbytes int) {
 
 	for -cap(buf) < -cap(endbuf) {
 		cycle(c)
-		XORWORD(c.sbuf, buf)
+		xorword(c.sbuf, buf)
 		buf = buf[4:]
 	}
 
@@ -361,7 +357,7 @@ func shn_maconly(c *shn_ctx, buf []byte, nbytes int) {
 
 	for -cap(buf) < -cap(endbuf) {
 		cycle(c)
-		macfunc(c, BYTE2WORD(buf))
+		macfunc(c, byte2word(buf))
 		buf = buf[4:]
 	}
 
@@ -411,10 +407,10 @@ func shn_encrypt(c *shn_ctx, buf []byte, nbytes int) {
 
 	for -cap(buf) < -cap(endbuf) {
 		cycle(c)
-		t = BYTE2WORD(buf)
+		t = byte2word(buf)
 		macfunc(c, t)
 		t ^= c.sbuf
-		WORD2BYTE(t, buf)
+		word2byte(t, buf)
 		buf = buf[4:]
 	}
 
@@ -465,9 +461,9 @@ func shn_decrypt(c *shn_ctx, buf []byte, nbytes int) {
 
 	for -cap(buf) < -cap(endbuf) {
 		cycle(c)
-		t = BYTE2WORD(buf) ^ c.sbuf
+		t = byte2word(buf) ^ c.sbuf
 		macfunc(c, t)
-		WORD2BYTE(t, buf)
+		word2byte(t, buf)
 		buf = buf[4:]
 	}
 
@@ -508,7 +504,7 @@ func shn_finish(c *shn_ctx, buf []byte, nbytes int) {
 	 */
 	cycle(c)
 
-	ADDKEY(c, INITKONST^(uint32(c.nbuf)<<3))
+	addkey(c, initkonst^(uint32(c.nbuf)<<3))
 	c.nbuf = 0
 
 	/* now add the CRC to the stream register and diffuse it */
@@ -521,12 +517,12 @@ func shn_finish(c *shn_ctx, buf []byte, nbytes int) {
 	for nbytes > 0 {
 		cycle(c)
 		if nbytes >= 4 {
-			WORD2BYTE(c.sbuf, buf)
+			word2byte(c.sbuf, buf)
 			nbytes -= 4
 			buf = buf[4:]
 		} else {
 			for i = 0; i < nbytes; i++ {
-				buf[i] = byte(Byte(c.sbuf, i))
+				buf[i] = byte(toByte(c.sbuf, i))
 			}
 			break
 		}
