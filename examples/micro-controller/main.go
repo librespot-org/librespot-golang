@@ -144,6 +144,22 @@ func main() {
 			addMdns(sController, reader)
 		case cmds[0] == "help":
 			printHelp()
+		case cmds[0] == "playlist":
+			playlist, err := sController.GetPlaylist(cmds[1])
+			if err != nil || playlist.Contents == nil {
+				fmt.Println("Playlist not found")
+				break
+			}
+			items := playlist.Contents.Items
+			var ids []string
+			for i := 0; i < len(items); i++ {
+				id := strings.Replace(items[i].GetUri(), "spotify:track:", "", 1)
+				ids = append(ids, id)
+			}
+			ident = getDevice(sController, ident, reader)
+			if ident != "" {
+				sController.LoadTrack(ident, ids)
+			}
 		}
 	}
 

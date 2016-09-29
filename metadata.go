@@ -59,6 +59,33 @@ type SearchResult struct {
 	Error error
 }
 
+func (c *SpircController) GetPlaylist(id string) (*Spotify.SelectedListContent, error) {
+	url := "hm://playlist/user/" + c.username + "/playlist/" + id
+	done := make(chan interface{})
+
+	go c.session.mercurySendRequest(mercuryRequest{
+		method:  "GET",
+		uri:     url,
+		payload: [][]byte{},
+	}, func(res mercuryResponse) {
+		result := &Spotify.SelectedListContent{}
+		err := proto.Unmarshal(res.combinePayload(), result)
+		if err != nil {
+			done <- err
+		} else {
+			done <- result
+		}
+	})
+
+	result := <-done
+	v, ok := result.(*Spotify.SelectedListContent)
+	if ok {
+		return v, nil
+	} else {
+		return nil, result.(error)
+	}
+}
+
 func (c *SpircController) Search(search string) (*SearchResult, error) {
 	url := "hm://searchview/km/v2/search/" + url.QueryEscape(search) + "?limit=12&tracks-limit=100&catalogue=&country=US&locale=en&platform=zelda&username="
 	done := make(chan interface{})
