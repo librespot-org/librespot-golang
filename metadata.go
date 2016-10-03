@@ -59,58 +59,30 @@ type SearchResult struct {
 	Error error
 }
 
-func (c *SpircController) GetPlaylist(id string) (*Spotify.SelectedListContent, error) {
-	url := "hm://playlist/user/" + c.username + "/playlist/" + id
-	done := make(chan interface{})
-
+func (c *SpircController) mercuryGet(url string) []byte {
+	done := make(chan []byte)
 	go c.session.mercurySendRequest(mercuryRequest{
 		method:  "GET",
 		uri:     url,
 		payload: [][]byte{},
 	}, func(res mercuryResponse) {
-		result := &Spotify.SelectedListContent{}
-		err := proto.Unmarshal(res.combinePayload(), result)
-		if err != nil {
-			done <- err
-		} else {
-			done <- result
-		}
+		done <- res.combinePayload()
 	})
 
 	result := <-done
-	v, ok := result.(*Spotify.SelectedListContent)
-	if ok {
-		return v, nil
-	} else {
-		return nil, result.(error)
-	}
+	return result
 }
 
-func (c *SpircController) Search(search string) (*SearchResult, error) {
-	url := "hm://searchview/km/v2/search/" + url.QueryEscape(search) + "?limit=12&tracks-limit=100&catalogue=&country=US&locale=en&platform=zelda&username="
-	done := make(chan interface{})
+func (c *SpircController) mercuryGetJson(url string, result interface{}) (err error) {
+	data := c.mercuryGet(url)
+	err = json.Unmarshal(data, result)
+	return
+}
 
-	go c.session.mercurySendRequest(mercuryRequest{
-		method:  "GET",
-		uri:     url,
-		payload: [][]byte{},
-	}, func(res mercuryResponse) {
-		result := &SearchResult{}
-		err := json.Unmarshal(res.combinePayload(), result)
-		if err != nil {
-			done <- err
-		} else {
-			done <- result
-		}
-	})
-
-	result := <-done
-	v, ok := result.(*SearchResult)
-	if ok {
-		return v, nil
-	} else {
-		return nil, result.(error)
-	}
+func (c *SpircController) mercuryGetProto(url string, result proto.Message) (err error) {
+	data := c.mercuryGet(url)
+	err = proto.Unmarshal(data, result)
+	return
 }
 
 type SuggestResult struct {
@@ -158,47 +130,39 @@ func (res *mercuryResponse) combinePayload() []byte {
 	return body
 }
 
-func (c *SpircController) Suggest(search string) (*SuggestResult, error) {
-	url := "hm://searchview/km/v3/suggest/" + url.QueryEscape(search) + "?limit=3&intent=2516516747764520149&sequence=0&catalogue=&country=&locale=&platform=zelda&username="
-	done := make(chan interface{})
-
-	go c.session.mercurySendRequest(mercuryRequest{
-		method:  "GET",
-		uri:     url,
-		payload: [][]byte{},
-	}, func(res mercuryResponse) {
-		result, err := parseSuggest(res.combinePayload())
-		if err != nil {
-			done <- err
-		} else {
-			done <- result
-		}
-	})
-
-	result := <-done
-	v, ok := result.(*SuggestResult)
-	if ok {
-		return v, nil
-	} else {
-		return nil, result.(error)
-	}
+func (c *SpircController) GetRootPlaylist() (*Spotify.SelectedListContent, error) {
+	url := "hm://playlist/user/" + c.username + "/rootlist"
+	result := &Spotify.SelectedListContent{}
+	err := c.mercuryGetProto(url, result)
+	return result, err
 }
 
-func (c *SpircController) GetTrack(id string) {
+func (c *SpircController) GetPlaylist(id string) (*Spotify.SelectedListContent, error) {
+	url := "hm://playlist/" + id
+
+	result := &Spotify.SelectedListContent{}
+	err := c.mercuryGetProto(url, result)
+	return result, err
+}
+
+func (c *SpircController) Search(search string) (*SearchResult, error) {
+	url := "hm://searchview/km/v2/search/" + url.QueryEscape(search) + "?limit=12&tracks-limit=100&catalogue=&country=US&locale=en&platform=zelda&username="
+
+	result := &SearchResult{}
+	err := c.mercuryGetJson(url, result)
+	return result, err
+}
+
+func (c *SpircController) Suggest(search string) (*SuggestResult, error) {
+	url := "hm://searchview/km/v3/suggest/" + url.QueryEscape(search) + "?limit=3&intent=2516516747764520149&sequence=0&catalogue=&country=&locale=&platform=zelda&username="
+	data := c.mercuryGet(url)
+
+	return parseSuggest(data)
+}
+
+func (c *SpircController) GetTrack(id string) (*Spotify.Track, error) {
 	url := "hm://metadata/3/track/" + id
-	c.session.mercurySendRequest(mercuryRequest{
-		method:  "GET",
-		uri:     url,
-		payload: [][]byte{},
-	}, func(res mercuryResponse) {
-		track := &Spotify.Track{}
-		err := proto.Unmarshal(res.payload[0], track)
-
-		if err != nil {
-			fmt.Println("error unmarshaling track")
-		}
-
-		fmt.Println("track", *track.Name)
-	})
-
+	result := &Spotify.Track{}
+	err := c.mercuryGetProto(url, result)
+	return result, err
 }

@@ -77,7 +77,9 @@ func printHelp() {
 	fmt.Println("play:                           play current track")
 	fmt.Println("pause:                          pause playing track")
 	fmt.Println("devices:                        list availbale devices")
-	fmt.Println("mdns:                           show devices found via zeroconf, and login on device\n")
+	fmt.Println("mdns:                           show devices found via zeroconf, and login on device")
+	fmt.Println("playlist <playlist id>:         load tracks from given playlist")
+	fmt.Println("rootlist:                       show list of user's playlists")
 	fmt.Println("help:                           show this list\n")
 }
 
@@ -153,12 +155,25 @@ func main() {
 			items := playlist.Contents.Items
 			var ids []string
 			for i := 0; i < len(items); i++ {
-				id := strings.Replace(items[i].GetUri(), "spotify:track:", "", 1)
+				id := strings.TrimPrefix(items[i].GetUri(), "spotify:track:")
 				ids = append(ids, id)
 			}
 			ident = getDevice(sController, ident, reader)
 			if ident != "" {
 				sController.LoadTrack(ident, ids)
+			}
+		case cmds[0] == "rootlist":
+			playlist, _ := sController.GetRootPlaylist()
+			if err != nil || playlist.Contents == nil {
+				fmt.Println("Error getting root list")
+				break
+			}
+			items := playlist.Contents.Items
+			for i := 0; i < len(items); i++ {
+				id := strings.TrimPrefix(items[i].GetUri(), "spotify:")
+				id = strings.Replace(id, ":", "/", -1)
+				list, _ := sController.GetPlaylist(id)
+				fmt.Println(list.Attributes.GetName(), id)
 			}
 		}
 	}
