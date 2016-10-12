@@ -45,7 +45,15 @@ func getDevice(controller *spotcontrol.SpircController, ident string, reader *bu
 }
 
 func addMdns(controller *spotcontrol.SpircController, reader *bufio.Reader) {
-	devices := controller.ListMdnsDevices()
+	devices, err := controller.ListMdnsDevices()
+	if err != nil {
+		fmt.Println("Mdns devices can only be found when micro-controller is started \n" +
+			"in discovery mode.  Restart without a username and password and with a --blobPath \n" +
+			"argument (path where discovery blob will be saved) to start micro-controller in \n" +
+			"disocvery mode \n")
+		return
+	}
+
 	if len(devices) == 0 {
 		fmt.Println("no devices found")
 		return

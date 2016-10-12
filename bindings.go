@@ -88,8 +88,11 @@ func (c *SpircController) ListDevicesJson() (string, error) {
 }
 
 func (c *SpircController) ListMdnsDevicesJson() (string, error) {
-	devices := c.ListMdnsDevices()
-	json, err := json.Marshal(devices)
+	devices, err := c.ListMdnsDevices()
+	if err != nil {
+		return "", nil
+	}
+	json, err = json.Marshal(devices)
 	if err != nil {
 		return "", nil
 	}

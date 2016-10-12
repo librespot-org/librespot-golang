@@ -1,6 +1,7 @@
 package spotcontrol
 
 import (
+	"errors"
 	"fmt"
 	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"github.com/golang/protobuf/proto"
@@ -130,8 +131,12 @@ func (c *SpircController) ConnectToDevice(address string) {
 
 // Lists devices on local network advertising spotify connect
 // service (_spotify-connect._tcp.).
-func (c *SpircController) ListMdnsDevices() []ConnectDevice {
+func (c *SpircController) ListMdnsDevices() ([]ConnectDevice, error) {
 	discovery := c.session.discovery
+	if discovery == nil {
+		return nil, errors.New(
+			"No discovery blob, must load blob before getting mdns devices")
+	}
 	discovery.devicesLock.RLock()
 	res := make([]ConnectDevice, 0, len(discovery.devices))
 	for _, device := range discovery.devices {
@@ -141,7 +146,7 @@ func (c *SpircController) ListMdnsDevices() []ConnectDevice {
 		})
 	}
 	discovery.devicesLock.RUnlock()
-	return res
+	return res, nil
 }
 
 // List active spotify-connect devices that can be sent commands

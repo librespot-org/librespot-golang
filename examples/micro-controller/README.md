@@ -27,4 +27,4 @@ Instead of supplying a username and password, the micro controller can advertise
 //start in discovery mode
 ./micro-controller --blobPath PATH_TO_STORE_BLOB
 ````
-Where PATH_TO_STORE_BLOB is the path of where to save the blob.  Once blob is saved it will be loaded on subsequent runs, and the connect step can be skipped.
+Where PATH_TO_STORE_BLOB is the path where the blob will be saved.  Once blob is saved it will be loaded on subsequent runs, and the connect step can be skipped.
