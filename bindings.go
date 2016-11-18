@@ -52,11 +52,11 @@ func (c *SpircController) HandleUpdatesCb(cb func(device string)) {
 	go func() {
 		for {
 			update := <-c.updateChan
-			json, err := json.Marshal(update)
+			jsonData, err := json.Marshal(update)
 			if err != nil {
 				fmt.Println("Error marhsaling device json")
 			} else {
-				cb(string(json))
+				cb(string(jsonData))
 			}
 		}
 	}()
@@ -68,11 +68,11 @@ func (c *SpircController) HandleUpdates(u Updater) {
 	go func() {
 		for {
 			update := <-c.updateChan
-			json, err := json.Marshal(update)
+			jsonData, err := json.Marshal(update)
 			if err != nil {
 				fmt.Println("Error marhsaling device json")
 			} else {
-				u.OnUpdate(string(json))
+				u.OnUpdate(string(jsonData))
 			}
 		}
 	}()
@@ -80,11 +80,11 @@ func (c *SpircController) HandleUpdates(u Updater) {
 
 func (c *SpircController) ListDevicesJson() (string, error) {
 	devices := c.ListDevices()
-	json, err := json.Marshal(devices)
+	jsonData, err := json.Marshal(devices)
 	if err != nil {
 		return "", nil
 	}
-	return string(json), nil
+	return string(jsonData), nil
 }
 
 func (c *SpircController) ListMdnsDevicesJson() (string, error) {
@@ -92,11 +92,11 @@ func (c *SpircController) ListMdnsDevicesJson() (string, error) {
 	if err != nil {
 		return "", nil
 	}
-	json, err = json.Marshal(devices)
+	jsonData, err := json.Marshal(devices)
 	if err != nil {
 		return "", nil
 	}
-	return string(json), nil
+	return string(jsonData), nil
 }
 
 func (c *SpircController) SuggestJson(term string) (string, error) {
@@ -104,11 +104,11 @@ func (c *SpircController) SuggestJson(term string) (string, error) {
 	if err != nil {
 		return "", nil
 	}
-	json, err := json.Marshal(result)
+	jsonData, err := json.Marshal(result)
 	if err != nil {
 		return "", nil
 	}
-	return string(json), nil
+	return string(jsonData), nil
 }
 
 func (c *SpircController) SearchJson(term string) (string, error) {
@@ -116,9 +116,9 @@ func (c *SpircController) SearchJson(term string) (string, error) {
 	if err != nil {
 		return "", nil
 	}
-	json, err := json.Marshal(result)
+	jsonData, err := json.Marshal(result)
 	if err != nil {
 		return "", nil
 	}
-	return string(json), nil
+	return string(jsonData), nil
 }
