@@ -1,5 +1,6 @@
 package Spotify;
 
+
 message ClientHello {
     required BuildInfo build_info = 0xa; 
     repeated Fingerprint fingerprints_supported = 0x14; 
