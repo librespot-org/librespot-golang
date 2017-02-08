@@ -135,6 +135,25 @@ func LoginSaved(username string, authData []byte, appkey []byte, deviceName stri
 	return s.doLogin(packet, username)
 }
 
+func LoginOauth(deviceName string, appkeyPath string) (*SpircController, error) {
+	token := getOAuthToken()
+	fmt.Println("got token")
+
+	s := setupSession()
+	s.deviceId = generateDeviceId(deviceName)
+	s.deviceName = deviceName
+
+	s.startConnection()
+
+	appkey, err := ioutil.ReadFile(appkeyPath)
+	if err != nil {
+		return nil, err
+	}
+	packet := loginPacket(appkey, "", []byte(token.Access_token),
+		Spotify.AuthenticationType_AUTHENTICATION_SPOTIFY_TOKEN.Enum(), s.deviceId)
+	return s.doLogin(packet, "")
+}
+
 //Login to spotify using username, password and app key file.
 func Login(username string, password string, appkeyPath string, deviceName string) (*SpircController, error) {
 	data, err := ioutil.ReadFile(appkeyPath)
