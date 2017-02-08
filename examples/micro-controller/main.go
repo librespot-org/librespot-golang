@@ -110,7 +110,7 @@ func main() {
 			sController, err = spotcontrol.LoginBlobFile(*blobPath, *appkey, *devicename)
 		}
 	} else if os.Getenv("client_secret") != "" {
-		sController, _ = spotcontrol.LoginOauth(*devicename, *appkey)
+		sController, err = spotcontrol.LoginOauth(*devicename, *appkey)
 	} else {
 		fmt.Println("need to supply a username and password or a blob file path")
 		fmt.Println("./spirccontroller --blobPath ./path/to/blob")

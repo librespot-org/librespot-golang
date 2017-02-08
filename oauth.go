@@ -44,6 +44,7 @@ func getOAuthToken() OAuth {
 		if err != nil {
 			// Retry since there is an nginx bug that causes http2 streams to get
 			// an initial REFUSED_STREAM response
+			// https://github.com/curl/curl/issues/804
 			resp, err = http.PostForm("https://accounts.spotify.com/api/token", val)
 			if err != nil {
 				return
