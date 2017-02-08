@@ -9,3 +9,9 @@ spotcontrol.zip
 spotcontrol.aar
 examples/spot-chrome/spot-chrome.js
 examples/spot-chrome/spot-chrome.js.map
+examples/spot-chrome/app.bundle.js
+examples/spot-chrome/main.js
+examples/spot-chrome/main.js.map
+examples/node/main.js
+examples/node/test.js
+examples/node/main.js.map
