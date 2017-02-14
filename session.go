@@ -137,8 +137,10 @@ func LoginSaved(username string, authData []byte, appkey []byte, deviceName stri
 
 func LoginOauth(deviceName string, appkeyPath string) (*SpircController, error) {
 	token := getOAuthToken()
-	fmt.Println("got token")
+	return LoginOauthToken(token.AccessToken, deviceName, appkeyPath)
+}
 
+func LoginOauthToken(accessToken string, deviceName string, appkeyPath string) (*SpircController, error) {
 	s := setupSession()
 	s.deviceId = generateDeviceId(deviceName)
 	s.deviceName = deviceName
@@ -149,7 +151,7 @@ func LoginOauth(deviceName string, appkeyPath string) (*SpircController, error) 
 	if err != nil {
 		return nil, err
 	}
-	packet := loginPacket(appkey, "", []byte(token.Access_token),
+	packet := loginPacket(appkey, "", []byte(accessToken),
 		Spotify.AuthenticationType_AUTHENTICATION_SPOTIFY_TOKEN.Enum(), s.deviceId)
 	return s.doLogin(packet, "")
 }

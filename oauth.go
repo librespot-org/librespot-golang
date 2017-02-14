@@ -11,9 +11,44 @@ import (
 )
 
 type OAuth struct {
-	Access_token  string
-	Refresh_token string
-	Scope         string
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	Scope        string `json:"scope"`
+	Error        string
+}
+
+func GetOauthAccessToken(code string, redirectUri string, clientId string, clientSecret string) (*OAuth, error) {
+	val := url.Values{}
+	val.Set("grant_type", "authorization_code")
+	val.Set("code", code)
+	val.Set("redirect_uri", redirectUri)
+	val.Set("client_id", clientId)
+	val.Set("client_secret", clientSecret)
+
+	resp, err := http.PostForm("https://accounts.spotify.com/api/token", val)
+	if err != nil {
+		// Retry since there is an nginx bug that causes http2 streams to get
+		// an initial REFUSED_STREAM response
+		// https://github.com/curl/curl/issues/804
+		resp, err = http.PostForm("https://accounts.spotify.com/api/token", val)
+		if err != nil {
+			return nil, err
+		}
+	}
+	defer resp.Body.Close()
+	auth := OAuth{}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(body, &auth)
+	if err != nil {
+		return nil, err
+	}
+	if auth.Error != "" {
+		return nil, fmt.Errorf("error getting token %v", auth.Error)
+	}
+	return &auth, nil
 }
 
 func getOAuthToken() OAuth {
@@ -31,35 +66,13 @@ func getOAuthToken() OAuth {
 
 	http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
 		params := r.URL.Query()
-		fmt.Println("Start callback", params.Get("code"), clientId, clientSecret)
-
-		val := url.Values{}
-		val.Set("grant_type", "authorization_code")
-		val.Set("code", params.Get("code"))
-		val.Set("redirect_uri", "http://localhost:8888/callback")
-		val.Set("client_id", clientId)
-		val.Set("client_secret", clientSecret)
-
-		resp, err := http.PostForm("https://accounts.spotify.com/api/token", val)
+		auth, err := GetOauthAccessToken(params.Get("code"), "http://localhost:8888/callback", clientId, clientSecret)
 		if err != nil {
-			// Retry since there is an nginx bug that causes http2 streams to get
-			// an initial REFUSED_STREAM response
-			// https://github.com/curl/curl/issues/804
-			resp, err = http.PostForm("https://accounts.spotify.com/api/token", val)
-			if err != nil {
-				return
-			}
+			fmt.Fprintf(w, "Error getting token %q", err)
+			return
 		}
-		defer resp.Body.Close()
-		f := OAuth{}
-		body, _ := ioutil.ReadAll(resp.Body)
-		json.Unmarshal(body, &f)
-		if params.Get("code") == "" {
-			fmt.Fprintf(w, "failed to get authorization code, visit \n %s", urlPath)
-		} else {
-			fmt.Fprintf(w, "loggin in...")
-			ch <- f
-		}
+		fmt.Fprintf(w, "Got token, loggin in")
+		ch <- *auth
 	})
 
 	go func() {
