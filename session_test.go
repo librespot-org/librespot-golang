@@ -113,7 +113,7 @@ func TestLogin(t *testing.T) {
 
 	result := make(chan []byte, 2)
 	go func() {
-		controller, err := s.loginSession("testUser", "123", make([]byte, 350), "myDevice")
+		controller, err := s.loginSession("testUser", "123", "myDevice")
 		if controller == nil || err != nil {
 			t.Errorf("bad return values")
 		}
@@ -138,9 +138,9 @@ func TestLogin(t *testing.T) {
 	// Get plain client response from plain connection
 	plainData, _ := readPlainPart(conn.writer, 0)
 	proto.Unmarshal(plainData, plainClientRes)
-	hmac := []byte{3, 180, 81, 127, 229, 238, 166, 171, 206, 224, 202, 171, 50, 12, 253, 38, 236, 198, 216, 115}
+	hmac := []byte{226, 239, 29, 188, 200, 160, 193, 245, 71, 39, 15, 82, 156, 34, 168, 224, 134, 149, 128, 222}
 	if !bytes.Equal(plainClientRes.LoginCryptoResponse.DiffieHellman.Hmac, hmac) {
-		t.Errorf("failed hmac comparison")
+		t.Errorf("failed hmac comparison", plainClientRes.LoginCryptoResponse.DiffieHellman.Hmac)
 	}
 
 	welcome := &Spotify.APWelcome{

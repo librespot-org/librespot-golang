@@ -12,12 +12,11 @@ go build
 ##Usage
 ````
 //in micro-controller directory
-./micro-controller --username SPOTIFY_USERNAME --password SPOTIFY_PASSWORD --appkey PATH_TO_APPKEY
+./micro-controller --username SPOTIFY_USERNAME --password SPOTIFY_PASSWORD
 
 //load tracks using space deliminated list of spotify track ids
 load 3Vn9oCZbdI1EMO7jxdz2Rc 2nMW1mZmdIt5rZCsX1uh9J
 ````
-Where PATH_TO_APPKEY is the path to your Spotify application key file (defaults to ./spotify_appkey.key).
 Spotify track ids can be found using the [spotify api console](https://developer.spotify.com/web-api/console/get-search-item/)
 
 #### Mdns discovery
@@ -40,6 +39,6 @@ Requires:
     export client_id=[Your id here]
     export client_secret=[Your client secret here]
   ````
-3. Start spot control with only ````--appkey PATH_TO_APPKEY```` specified
+3. Start spot control with no arguments
 
 

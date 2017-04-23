@@ -94,7 +94,6 @@ func printHelp() {
 func main() {
 	username := flag.String("username", "", "spotify username")
 	password := flag.String("password", "", "spotify password")
-	appkey := flag.String("appkey", "./spotify_appkey.key", "spotify appkey file path")
 	blobPath := flag.String("blobPath", "", "path to saved blob")
 	devicename := flag.String("devicename", defaultdevicename, "name of device")
 	flag.Parse()
@@ -102,15 +101,15 @@ func main() {
 	var sController *spotcontrol.SpircController
 	var err error
 	if *username != "" && *password != "" {
-		sController, err = spotcontrol.Login(*username, *password, *appkey, *devicename)
+		sController, err = spotcontrol.Login(*username, *password, *devicename)
 	} else if *blobPath != "" {
 		if _, err = os.Stat(*blobPath); os.IsNotExist(err) {
-			sController, err = spotcontrol.LoginDiscovery(*blobPath, *appkey, *devicename)
+			sController, err = spotcontrol.LoginDiscovery(*blobPath, *devicename)
 		} else {
-			sController, err = spotcontrol.LoginBlobFile(*blobPath, *appkey, *devicename)
+			sController, err = spotcontrol.LoginBlobFile(*blobPath, *devicename)
 		}
 	} else if os.Getenv("client_secret") != "" {
-		sController, err = spotcontrol.LoginOauth(*devicename, *appkey)
+		sController, err = spotcontrol.LoginOauth(*devicename)
 	} else {
 		fmt.Println("need to supply a username and password or a blob file path")
 		fmt.Println("./spirccontroller --blobPath ./path/to/blob")
