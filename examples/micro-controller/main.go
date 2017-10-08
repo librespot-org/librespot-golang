@@ -95,6 +95,7 @@ func main() {
 	username := flag.String("username", "", "spotify username")
 	password := flag.String("password", "", "spotify password")
 	blobPath := flag.String("blobPath", "", "path to saved blob")
+	indentFlag := flag.String("ident", "", "intially selected ident")
 	devicename := flag.String("devicename", defaultdevicename, "name of device")
 	flag.Parse()
 
@@ -124,7 +125,7 @@ func main() {
 	}
 
 	reader := bufio.NewReader(os.Stdin)
-	var ident string
+	ident := *indentFlag
 	printHelp()
 	for {
 		fmt.Print("Enter a command: ")
