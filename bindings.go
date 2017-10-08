@@ -13,8 +13,7 @@ type Updater interface {
 	OnUpdate(device string)
 }
 
-func LoginConnection(username string, password string,
-	appkey []byte, deviceName string, con io.ReadWriter) (*SpircController, error) {
+func LoginConnection(username string, password string, deviceName string, con io.ReadWriter) (*SpircController, error) {
 	s := &session{
 		keys:               generateKeys(),
 		tcpCon:             con,
@@ -25,12 +24,11 @@ func LoginConnection(username string, password string,
 	s.deviceName = deviceName
 
 	s.startConnection()
-	loginPacket := loginPacketPassword(appkey, username, password, s.deviceId)
+	loginPacket := loginPacketPassword(username, password, s.deviceId)
 	return s.doLogin(loginPacket, username)
 }
 
-func LoginConnectionSaved(username string, authData []byte,
-	appkey []byte, deviceName string, con io.ReadWriter) (*SpircController, error) {
+func LoginConnectionSaved(username string, authData []byte, deviceName string, con io.ReadWriter) (*SpircController, error) {
 	s := &session{
 		keys:               generateKeys(),
 		tcpCon:             con,
@@ -41,7 +39,7 @@ func LoginConnectionSaved(username string, authData []byte,
 	s.deviceName = deviceName
 
 	s.startConnection()
-	packet := loginPacket(appkey, username, authData,
+	packet := loginPacket(username, authData,
 		Spotify.AuthenticationType_AUTHENTICATION_STORED_SPOTIFY_CREDENTIALS.Enum(), s.deviceId)
 	return s.doLogin(packet, username)
 }

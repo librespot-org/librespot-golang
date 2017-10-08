@@ -55,10 +55,6 @@ function stateComponent(){
 function loginComponent() {
 	return `
 	<form>
-		<label>
-			appkey
-			<input type="file" id="appkey"></input>
-		</label>
 		<input type="text" id="username" placeholder="username"></input>
 		<input type="password" id="password" placeholder="password"></input>
 		<label>
@@ -104,20 +100,13 @@ function listenCommands(){
 
 	$("#loginComponent").on("submit", "form", function(e){
 		e.preventDefault()
-		const reader  = new FileReader();
 
-		reader.addEventListener("load", function(){
-			const doSave = $('input[type="checkbox"]').attr('checked')
-			const loginData = {
-				username: $("#username").val(),
-				password: $("#password").val(),
-				appkey: reader.result.replace('data:;base64,','')
-			}
-			doLogin(loginData, doSave)
-		})
-
-		const file = $('input[type=file]')[0].files[0];
-		reader.readAsDataURL(file);
+		const doSave = $('input[type="checkbox"]').attr('checked')
+		const loginData = {
+			username: $("#username").val(),
+			password: $("#password").val(),
+		}
+		doLogin(loginData, doSave)
 	})
 }
 
@@ -125,20 +114,19 @@ function saveLogin(loginData) {
 	chrome.storage.local.set({
 		username: loginData.username,
 		authData: loginData.authData,
-		appkey: loginData.appkey
 	})
 }
 
 function doLogin(loginData, doSave) {
 	if(loginData.authData) {
-		spotcontrol.loginSaved(loginData.username, loginData.authData, loginData.appkey, controller => {
+		spotcontrol.loginSaved(loginData.username, loginData.authData, controller => {
 			appState.loggedIn = true;
 			renderAll();
 			window.controller = controller
 			controller.HandleUpdatesCb(handleUpdates)
 		})
 	} else {
-		spotcontrol.login(loginData.username, loginData.password, loginData.appkey, (controller, authData, err) => {
+		spotcontrol.login(loginData.username, loginData.password, (controller, authData, err) => {
 			loginData.authData = authData;
 			doSave && saveLogin(loginData);
 			appState.loggedIn = true;
@@ -209,7 +197,7 @@ function handleUpdates(update){
 
 $(document).ready(function(){
 	listenCommands()
-	chrome.storage.local.get(['username','authData', 'appkey'], items =>{
+	chrome.storage.local.get(['username','authData'], items =>{
 		if(items.username && items.authData) {
 			doLogin(items)
 		} else {

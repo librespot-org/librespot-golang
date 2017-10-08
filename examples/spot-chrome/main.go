@@ -72,12 +72,11 @@ func convert64to62(data64 string) string {
 	return spotcontrol.ConvertTo62(data)
 }
 
-func loginSaved(username, authData string, appkey string, cb *js.Object) {
+func loginSaved(username, authData string, cb *js.Object) {
 	go func() {
-		key, _ := base64.StdEncoding.DecodeString(appkey)
 		data, _ := base64.StdEncoding.DecodeString(authData)
 		conn, _ := MakeConn()
-		sController, err := spotcontrol.LoginConnectionSaved(username, data, key, "spotcontrol", conn)
+		sController, err := spotcontrol.LoginConnectionSaved(username, data, "spotcontrol", conn)
 		if err != nil {
 			cb.Invoke(nil, "", "login failed")
 		}
@@ -86,11 +85,10 @@ func loginSaved(username, authData string, appkey string, cb *js.Object) {
 	}()
 }
 
-func login(username, password, appkey string, cb *js.Object) {
+func login(username, password string, cb *js.Object) {
 	go func() {
-		key, _ := base64.StdEncoding.DecodeString(appkey)
 		conn, _ := MakeConn()
-		sController, err := spotcontrol.LoginConnection(username, password, key, "spotcontrol", conn)
+		sController, err := spotcontrol.LoginConnection(username, password, "spotcontrol", conn)
 		if err != nil {
 			cb.Invoke(nil, "", "login failed")
 		} else {
