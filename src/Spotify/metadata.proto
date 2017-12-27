@@ -50,6 +50,7 @@ message Album {
         ALBUM = 0x1;
         SINGLE = 0x2;
         COMPILATION = 0x3;
+        EP = 0x4;
     }
     optional string label = 0x5;
     optional Date date = 0x6;
@@ -159,6 +160,8 @@ message AudioFile {
         OTHER3 = 0x9;
         AAC_160 = 0xa;
         AAC_320 = 0xb;
+        OTHER4 = 0xc;
+        OTHER5 = 0xd;
     }
 }
 
