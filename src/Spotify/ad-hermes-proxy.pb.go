@@ -170,6 +170,7 @@ It has these top-level messages:
 	State
 	TrackRef
 	Ad
+	Metadata
 	Toplist
 */
 package Spotify
