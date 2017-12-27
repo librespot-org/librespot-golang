@@ -4,15 +4,15 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/badfortrains/spotcontrol"
+	"librespot"
 	"os"
 	"strconv"
 	"strings"
 )
 
-const defaultdevicename = "SpotControl"
+const defaultdevicename = "librespot"
 
-func chooseDevice(controller *spotcontrol.SpircController, reader *bufio.Reader) string {
+func chooseDevice(controller *librespot.SpircController, reader *bufio.Reader) string {
 	devices := controller.ListDevices()
 	if len(devices) == 0 {
 		fmt.Println("no devices")
@@ -36,7 +36,7 @@ func chooseDevice(controller *spotcontrol.SpircController, reader *bufio.Reader)
 	}
 }
 
-func getDevice(controller *spotcontrol.SpircController, ident string, reader *bufio.Reader) string {
+func getDevice(controller *librespot.SpircController, ident string, reader *bufio.Reader) string {
 	if ident != "" {
 		return ident
 	} else {
@@ -44,7 +44,7 @@ func getDevice(controller *spotcontrol.SpircController, ident string, reader *bu
 	}
 }
 
-func addMdns(controller *spotcontrol.SpircController, reader *bufio.Reader) {
+func addMdns(controller *librespot.SpircController, reader *bufio.Reader) {
 	devices, err := controller.ListMdnsDevices()
 	if err != nil {
 		fmt.Println("Mdns devices can only be found when micro-controller is started \n" +
@@ -99,18 +99,18 @@ func main() {
 	devicename := flag.String("devicename", defaultdevicename, "name of device")
 	flag.Parse()
 
-	var sController *spotcontrol.SpircController
+	var sController *librespot.SpircController
 	var err error
 	if *username != "" && *password != "" {
-		sController, err = spotcontrol.Login(*username, *password, *devicename)
+		sController, err = librespot.Login(*username, *password, *devicename)
 	} else if *blobPath != "" {
 		if _, err = os.Stat(*blobPath); os.IsNotExist(err) {
-			sController, err = spotcontrol.LoginDiscovery(*blobPath, *devicename)
+			sController, err = librespot.LoginDiscovery(*blobPath, *devicename)
 		} else {
-			sController, err = spotcontrol.LoginBlobFile(*blobPath, *devicename)
+			sController, err = librespot.LoginBlobFile(*blobPath, *devicename)
 		}
 	} else if os.Getenv("client_secret") != "" {
-		sController, err = spotcontrol.LoginOauth(*devicename)
+		sController, err = librespot.LoginOauth(*devicename)
 	} else {
 		fmt.Println("need to supply a username and password or a blob file path")
 		fmt.Println("./spirccontroller --blobPath ./path/to/blob")

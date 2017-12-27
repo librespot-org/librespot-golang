@@ -15,3 +15,6 @@ examples/spot-chrome/main.js.map
 examples/node/main.js
 examples/node/test.js
 examples/node/main.js.map
+vendor/
+.idea/
+pkg/
