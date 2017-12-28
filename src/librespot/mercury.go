@@ -1,14 +1,18 @@
 package librespot
 
 import (
+	"Spotify"
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"github.com/golang/protobuf/proto"
 	"io"
 	"sync"
 )
+
+// Mercury is the protocol implementation for Spotify Connect playback control and metadata fetching.It works as a
+// PUB/SUB system, where you, as an audio sink, subscribes to the events of a specified user (playlist changes) but
+// also access various metadata normally fetched by external players (tracks metadata, playlists, artists, etc).
 
 type mercuryResponse struct {
 	headerData []byte
@@ -42,14 +46,21 @@ type mercuryInternal struct {
 type mercuryClient struct {
 	subscriptions map[string][]chan mercuryResponse
 	callbacks     map[string]responseCallback
-	mInternal     *mercuryInternal
+	internal      *mercuryInternal
 }
 
-func setupMercury(s *session) mercuryCon {
+type mercuryConnection interface {
+	Subscribe(uri string, recv chan mercuryResponse, cb responseCallback) error
+	Request(req mercuryRequest, cb responseCallback) (err error)
+	Handle(cmd uint8, reader io.Reader) (err error)
+}
+
+// setupMercury initializes a mercuryConnection for the specified session.
+func setupMercury(s *session) mercuryConnection {
 	client := &mercuryClient{
 		callbacks:     make(map[string]responseCallback),
 		subscriptions: make(map[string][]chan mercuryResponse),
-		mInternal: &mercuryInternal{
+		internal: &mercuryInternal{
 			pending: make(map[string]mercuryPending),
 			stream:  s.stream,
 		},
@@ -57,7 +68,28 @@ func setupMercury(s *session) mercuryCon {
 	return client
 }
 
-func (m *mercuryClient) addChanelSubscriber(uri string, recv chan mercuryResponse) {
+// Subscribe subscribes the specified receiving channel to the specified URI, and calls the callback function
+// whenever there's an event happening.
+func (m *mercuryClient) Subscribe(uri string, recv chan mercuryResponse, cb responseCallback) error {
+	m.addChannelSubscriber(uri, recv)
+	err := m.Request(mercuryRequest{
+		method: "SUB",
+		uri:    uri,
+	}, func(response mercuryResponse) {
+		for _, part := range response.payload {
+			sub := &Spotify.Subscription{}
+			err := proto.Unmarshal(part, sub)
+			if err == nil && *sub.Uri != uri {
+				m.addChannelSubscriber(*sub.Uri, recv)
+			}
+		}
+		cb(response)
+	})
+
+	return err
+}
+
+func (m *mercuryClient) addChannelSubscriber(uri string, recv chan mercuryResponse) {
 	chList, ok := m.subscriptions[uri]
 	if !ok {
 		chList = make([]chan mercuryResponse, 0)
@@ -67,27 +99,8 @@ func (m *mercuryClient) addChanelSubscriber(uri string, recv chan mercuryRespons
 	m.subscriptions[uri] = chList
 }
 
-func (m *mercuryClient) Subscribe(uri string, recv chan mercuryResponse, cb responseCallback) error {
-	m.addChanelSubscriber(uri, recv)
-	err := m.request(mercuryRequest{
-		method: "SUB",
-		uri:    uri,
-	}, func(response mercuryResponse) {
-		for _, part := range response.payload {
-			sub := &Spotify.Subscription{}
-			err := proto.Unmarshal(part, sub)
-			if err == nil && *sub.Uri != uri {
-				m.addChanelSubscriber(*sub.Uri, recv)
-			}
-		}
-		cb(response)
-	})
-
-	return err
-}
-
-func (m *mercuryClient) request(req mercuryRequest, cb responseCallback) (err error) {
-	seq, err := m.mInternal.request(req)
+func (m *mercuryClient) Request(req mercuryRequest, cb responseCallback) (err error) {
+	seq, err := m.internal.request(req)
 	if err != nil {
 		return err
 	}
@@ -212,8 +225,8 @@ func handleHead(reader io.Reader) (seq []byte, flags uint8, count uint16, err er
 	return
 }
 
-func (m *mercuryClient) handle(cmd uint8, reader io.Reader) (err error) {
-	response, err := m.mInternal.parseResponse(cmd, reader)
+func (m *mercuryClient) Handle(cmd uint8, reader io.Reader) (err error) {
+	response, err := m.internal.parseResponse(cmd, reader)
 	if err != nil {
 		return
 	}

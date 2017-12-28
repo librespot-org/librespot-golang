@@ -1,14 +1,15 @@
 package librespot
 
 import (
+	"Spotify"
 	"errors"
 	"fmt"
-	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"github.com/golang/protobuf/proto"
 	"strings"
 	"sync"
 )
 
+// SpircController is a structure for Spotify Connect remote control interface.
 type SpircController struct {
 	session     *session
 	seqNr       uint32
@@ -23,7 +24,7 @@ type SpircController struct {
 
 // Represents an available spotify connect device.
 // For mdns devices not yet authenitcated, Ident will be ""
-// and Url will be the address to pass to ConnectToDevie.
+// and Url will be the address to pass to ConnectToDevice.
 type ConnectDevice struct {
 	Name   string
 	Ident  string
@@ -135,7 +136,7 @@ func (c *SpircController) ListMdnsDevices() ([]ConnectDevice, error) {
 	discovery := c.session.discovery
 	if discovery == nil {
 		return nil, errors.New(
-			"No discovery blob, must load blob before getting mdns devices")
+			"No connectDiscovery blob, must load blob before getting mdns devices")
 	}
 	discovery.devicesLock.RLock()
 	res := make([]ConnectDevice, 0, len(discovery.devices))
@@ -164,7 +165,7 @@ func (c *SpircController) ListDevices() []ConnectDevice {
 func (c *SpircController) sendFrame(frame *Spotify.Frame) error {
 	frameData, err := proto.Marshal(frame)
 	if err != nil {
-		return fmt.Errorf("could not Marshal spirc request frame: ", err)
+		return fmt.Errorf("could not Marshal spirc Request frame: ", err)
 	}
 
 	payload := make([][]byte, 1)

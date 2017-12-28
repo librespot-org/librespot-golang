@@ -8,31 +8,34 @@ import (
 	"net/http"
 )
 
-type aplist struct {
+const kAPEndpoint = "https://APResolve.spotify.com/"
+
+// APList is the JSON structure corresponding to the output of the AP endpoint resolve API
+type APList struct {
 	ApList []string `json:"ap_list"`
 }
 
-func apresolve() (string, error) {
-	apendpoint := "http://apresolve.spotify.com/"
-	r, err := http.Get(apendpoint)
+// APResolve fetches the available Spotify servers (AP) and picks a random one
+func APResolve() (string, error) {
+	r, err := http.Get(kAPEndpoint)
 	if err != nil {
 		return "", err
 	}
 	defer r.Body.Close()
 
-	endpoints := &aplist{}
+	var endpoints APList
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return "", err
 	}
 
-	err = json.Unmarshal(body, endpoints)
+	err = json.Unmarshal(body, &endpoints)
 	if err != nil {
 		return "", err
 	}
 	if len(endpoints.ApList) == 0 {
-		return "", errors.New("Ap enpoint list is empty")
+		return "", errors.New("AP endpoint list is empty")
 	}
 
 	return endpoints.ApList[rand.Intn(len(endpoints.ApList))], nil

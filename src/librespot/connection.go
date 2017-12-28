@@ -5,6 +5,7 @@ import (
 	"io"
 )
 
+// plainConnection represents an unencrypted connection to a Spotify AP
 type plainConnection struct {
 	writer io.Writer
 	reader io.Reader

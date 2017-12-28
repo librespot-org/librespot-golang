@@ -17,17 +17,20 @@ import (
 	"net"
 )
 
+// connectInfo stores the information about Spotify Connect connection
 type connectInfo struct {
 	DeviceID  string `json:"deviceID"`
 	PublicKey string `json:"publicKey"`
 }
 
+// connectDeviceMdns stores the information about Spotify Connect MDNS Request
 type connectDeviceMdns struct {
 	path string
 	name string
 }
 
-type getInfo struct {
+// connectGetInfo stores the information about a Spotify Connect information Request
+type connectGetInfo struct {
 	Status           int    `json:"status"`
 	StatusError      string `json:"statusError"`
 	SpotifyError     int    `json:"spotifyError"`
@@ -43,7 +46,8 @@ type getInfo struct {
 	ModelDisplayName string `json:"modelDisplayName"`
 }
 
-type discovery struct {
+// connectDiscovery stores the information about Spotify Connect Discovery Request
+type connectDiscovery struct {
 	keys       privateKeys
 	cachePath  string
 	loginBlob  BlobInfo
@@ -56,8 +60,9 @@ type discovery struct {
 	devicesLock sync.RWMutex
 }
 
-func makeGetInfo(deviceId, deviceName, publicKey string) getInfo {
-	return getInfo{
+// makeConnectGetInfo builds a connectGetInfo structure with the provided values
+func makeConnectGetInfo(deviceId string, deviceName string, publicKey string) connectGetInfo {
+	return connectGetInfo{
 		Status:           101,
 		StatusError:      "ERROR-OK",
 		SpotifyError:     0,
@@ -74,17 +79,16 @@ func makeGetInfo(deviceId, deviceName, publicKey string) getInfo {
 	}
 }
 
-// Advertise spotify service via mdns.  Waits for user
-// to connect to 'spotcontrol' device.  Extracts login data
-// and returns login BlobInfo.
+// Advertises a Spotify service via mdns. It waits for the user to connect to 'librespot' device, extracts login data
+// and returns the resulting login BlobInfo.
 func BlobFromDiscovery(deviceName string) *BlobInfo {
 	deviceId := generateDeviceId(deviceName)
 	d := loginFromConnect("", deviceId, deviceName)
 	return &d.loginBlob
 }
 
-func loginFromConnect(cachePath, deviceId string, deviceName string) *discovery {
-	d := discovery{
+func loginFromConnect(cachePath string, deviceId string, deviceName string) *connectDiscovery {
+	d := connectDiscovery{
 		keys:       generateKeys(),
 		cachePath:  cachePath,
 		deviceId:   deviceId,
@@ -106,8 +110,8 @@ func loginFromConnect(cachePath, deviceId string, deviceName string) *discovery 
 	return &d
 }
 
-func discoveryFromBlob(blob BlobInfo, cachePath, deviceId string, deviceName string) *discovery {
-	d := discovery{
+func discoveryFromBlob(blob BlobInfo, cachePath, deviceId string, deviceName string) *connectDiscovery {
+	d := connectDiscovery{
 		keys:       generateKeys(),
 		cachePath:  cachePath,
 		deviceId:   deviceId,
@@ -120,7 +124,7 @@ func discoveryFromBlob(blob BlobInfo, cachePath, deviceId string, deviceName str
 	return &d
 }
 
-func loginFromFile(cachePath, deviceId string, deviceName string) *discovery {
+func loginFromFile(cachePath, deviceId string, deviceName string) *connectDiscovery {
 	blob, err := blobFromFile(cachePath)
 	if err != nil {
 		log.Fatal("failed to get blob from file")
@@ -149,7 +153,7 @@ func findCpath(info []string) string {
 	return ""
 }
 
-func (d *discovery) FindDevices() {
+func (d *connectDiscovery) FindDevices() {
 	ch := make(chan *mdns.ServiceEntry, 10)
 
 	d.devices = make([]connectDeviceMdns, 0)
@@ -175,10 +179,10 @@ func (d *discovery) FindDevices() {
 	}
 }
 
-func (d *discovery) ConnectToDevice(address string) {
-	resp, err := http.Get(address + "?action=getInfo")
+func (d *connectDiscovery) ConnectToDevice(address string) {
+	resp, err := http.Get(address + "?action=connectGetInfo")
 	resp, err = http.Get(address + "?action=resetUsers")
-	resp, err = http.Get(address + "?action=getInfo")
+	resp, err = http.Get(address + "?action=connectGetInfo")
 
 	fmt.Println("start get")
 	defer resp.Body.Close()
@@ -207,7 +211,7 @@ func (d *discovery) ConnectToDevice(address string) {
 	fmt.Println("got", f, resp, err)
 }
 
-func (d *discovery) handleAddUser(r *http.Request) error {
+func (d *connectDiscovery) handleAddUser(r *http.Request) error {
 	//already have login info, ignore
 	if d.loginBlob.Username != "" {
 		return nil
@@ -218,8 +222,8 @@ func (d *discovery) handleAddUser(r *http.Request) error {
 	blob64 := r.FormValue("blob")
 
 	if username == "" || client64 == "" || blob64 == "" {
-		log.Println("Bad request, addUser")
-		return errors.New("Bad username request")
+		log.Println("Bad Request, addUser")
+		return errors.New("Bad username Request")
 	}
 
 	blob, err := newBlobInfo(blob64, client64, d.keys,
@@ -238,14 +242,14 @@ func (d *discovery) handleAddUser(r *http.Request) error {
 	return nil
 }
 
-func (d *discovery) startHttp(done chan int, l net.Listener) {
+func (d *connectDiscovery) startHttp(done chan int, l net.Listener) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		action := r.FormValue("action")
-		fmt.Println("got request: ", action)
+		fmt.Println("got Request: ", action)
 		switch {
-		case "getInfo" == action || "resetUsers" == action:
+		case "connectGetInfo" == action || "resetUsers" == action:
 			client64 := base64.StdEncoding.EncodeToString(d.keys.pubKey())
-			info := makeGetInfo(d.deviceId, d.deviceName, client64)
+			info := makeConnectGetInfo(d.deviceId, d.deviceName, client64)
 
 			js, err := json.Marshal(info)
 			if err != nil {
@@ -270,16 +274,16 @@ func (d *discovery) startHttp(done chan int, l net.Listener) {
 	}
 }
 
-func (d *discovery) startDiscoverable() {
+func (d *connectDiscovery) startDiscoverable() {
 	fmt.Println("start discoverable")
 	info := []string{"VERSION=1.0", "CPath=/"}
 
 	ifaces, err := net.Interfaces()
-	// handle err
+	// Handle err
 	ips := make([]net.IP, 0)
 	for _, i := range ifaces {
 		addrs, _ := i.Addrs()
-		// handle err
+		// Handle err
 		for _, addr := range addrs {
 			switch v := addr.(type) {
 			case *net.IPNet:
@@ -292,17 +296,17 @@ func (d *discovery) startDiscoverable() {
 		}
 	}
 
-	service, err := mdns.NewMDNSService("spotcontrol"+strconv.Itoa(rand.Intn(200)),
+	service, err := mdns.NewMDNSService("librespot"+strconv.Itoa(rand.Intn(200)),
 		"_spotify-connect._tcp", "", "", 8000, ips, info)
 	if err != nil {
 		fmt.Println(err)
-		log.Fatal("error starting discovery")
+		log.Fatal("error starting connectDiscovery")
 	}
 	server, err := mdns.NewServer(&mdns.Config{
 		Zone: service,
 	})
 	if err != nil {
-		log.Fatal("error starting discovery")
+		log.Fatal("error starting connectDiscovery")
 	}
 	d.mdnsServer = server
 }

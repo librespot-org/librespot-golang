@@ -1,8 +1,8 @@
 package librespot
 
 import (
+	"Spotify"
 	"encoding/binary"
-	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"github.com/golang/protobuf/proto"
 	"testing"
 )

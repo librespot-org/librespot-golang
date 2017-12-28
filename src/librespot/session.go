@@ -1,13 +1,11 @@
-// Package spotcontol contains functions to remotely
-// control spotify connect devices.
 package librespot
 
 import (
+	"Spotify"
 	"bytes"
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
-	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"github.com/golang/protobuf/proto"
 	"io"
 	"log"
@@ -18,12 +16,6 @@ const (
 	subscribe_type = iota
 	request_type
 )
-
-type mercuryCon interface {
-	Subscribe(uri string, recv chan mercuryResponse, cb responseCallback) error
-	request(req mercuryRequest, cb responseCallback) (err error)
-	handle(cmd uint8, reader io.Reader) (err error)
-}
 
 type packetStream interface {
 	SendPacket(cmd uint8, data []byte) (err error)
@@ -37,14 +29,14 @@ type dialer interface {
 //Represents an active authenticated spotify connection
 type session struct {
 	stream  packetStream
-	mercury mercuryCon
+	mercury mercuryConnection
 	tcpCon  io.ReadWriter
 	keys    privateKeys
 
-	mercuryConstructor func(s *session) mercuryCon
+	mercuryConstructor func(s *session) mercuryConnection
 	shannonConstructor func(keys sharedKeys, conn plainConnection) packetStream
 
-	discovery *discovery
+	discovery *connectDiscovery
 
 	deviceId   string
 	deviceName string
@@ -90,6 +82,18 @@ func (s *session) startConnection() {
 
 	s.stream = s.shannonConstructor(sharedKeys, conn)
 	s.mercury = s.mercuryConstructor(s)
+}
+
+func (s *session) SendAndRecvStreamPacket(cmd uint8, packet []byte) (uint8, []byte, error) {
+	// TODO: lock
+	err := s.stream.SendPacket(cmd, packet)
+
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return s.stream.RecvPacket()
+	// TODO: unlock (or defer)
 }
 
 func (s *session) doLogin(packet []byte, username string) (*SpircController, error) {
@@ -170,7 +174,7 @@ func LoginBlob(username string, blob string, deviceName string) (*SpircControlle
 }
 
 func setupSession() *session {
-	apUrl, err := apresolve()
+	apUrl, err := APResolve()
 	if err != nil {
 		log.Fatal("Failed to get ap url", err)
 	}
@@ -187,7 +191,7 @@ func setupSession() *session {
 	}
 }
 
-func sessionFromDiscovery(d *discovery) (*SpircController, error) {
+func sessionFromDiscovery(d *connectDiscovery) (*SpircController, error) {
 	s := setupSession()
 	s.discovery = d
 	s.deviceId = d.deviceId
@@ -217,11 +221,6 @@ func LoginBlobFile(cacheBlobPath, deviceName string) (*SpircController, error) {
 	return sessionFromDiscovery(discovery)
 }
 
-type cmdPkt struct {
-	cmd  uint8
-	data []byte
-}
-
 func (s *session) run() {
 	for {
 		cmd, data, err := s.stream.RecvPacket()
@@ -237,7 +236,7 @@ func (s *session) mercurySubscribe(uri string, responseCh chan mercuryResponse, 
 }
 
 func (s *session) mercurySendRequest(request mercuryRequest, responseCb responseCallback) {
-	err := s.mercury.request(request, responseCb)
+	err := s.mercury.Request(request, responseCb)
 	if err != nil && responseCb != nil {
 		responseCb(mercuryResponse{
 			statusCode: 500,
@@ -272,14 +271,14 @@ func (s *session) handle(cmd uint8, data []byte) {
 	case cmd == 0x4:
 		err := s.stream.SendPacket(0x49, data)
 		if err != nil {
-			log.Fatal("handle 0x4", err)
+			log.Fatal("Handle 0x4", err)
 		}
 	case cmd == 0x1b:
-		// handle country code
+		// Handle country code
 	case 0xb2 <= cmd && cmd <= 0xb6 || cmd == 0x1b:
-		err := s.mercury.handle(cmd, bytes.NewReader(data))
+		err := s.mercury.Handle(cmd, bytes.NewReader(data))
 		if err != nil {
-			log.Fatal("handle 0xbx", err)
+			log.Fatal("Handle 0xbx", err)
 		}
 	default:
 	}

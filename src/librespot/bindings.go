@@ -3,9 +3,9 @@
 package librespot
 
 import (
+	"Spotify"
 	"encoding/json"
 	"fmt"
-	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"io"
 )
 

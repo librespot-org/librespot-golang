@@ -295,7 +295,7 @@ func shn_nonce(c *shn_ctx, nonce []byte, noncelen int) {
 func shn_stream(c *shn_ctx, buf []byte, nbytes int) {
 	var endbuf []byte
 
-	/* handle any previously buffered bytes */
+	/* Handle any previously buffered bytes */
 	for c.nbuf != 0 && nbytes != 0 {
 		buf[0] ^= byte(c.sbuf & 0xFF)
 		buf = buf[1:]
@@ -304,7 +304,7 @@ func shn_stream(c *shn_ctx, buf []byte, nbytes int) {
 		nbytes--
 	}
 
-	/* handle whole words */
+	/* Handle whole words */
 	endbuf = buf[uint32(nbytes)&^(uint32(0x03)):]
 
 	for -cap(buf) < -cap(endbuf) {
@@ -313,7 +313,7 @@ func shn_stream(c *shn_ctx, buf []byte, nbytes int) {
 		buf = buf[4:]
 	}
 
-	/* handle any trailing bytes */
+	/* Handle any trailing bytes */
 	nbytes &= 0x03
 
 	if nbytes != 0 {
@@ -335,7 +335,7 @@ func shn_stream(c *shn_ctx, buf []byte, nbytes int) {
 func shn_maconly(c *shn_ctx, buf []byte, nbytes int) {
 	var endbuf []byte
 
-	/* handle any previously buffered bytes */
+	/* Handle any previously buffered bytes */
 	if c.nbuf != 0 {
 		for c.nbuf != 0 && nbytes != 0 {
 			c.mbuf ^= uint32(buf[0]) << uint(32-c.nbuf)
@@ -352,7 +352,7 @@ func shn_maconly(c *shn_ctx, buf []byte, nbytes int) {
 		macfunc(c, c.mbuf)
 	}
 
-	/* handle whole words */
+	/* Handle whole words */
 	endbuf = buf[uint32(nbytes)&^(uint32(0x03)):]
 
 	for -cap(buf) < -cap(endbuf) {
@@ -361,7 +361,7 @@ func shn_maconly(c *shn_ctx, buf []byte, nbytes int) {
 		buf = buf[4:]
 	}
 
-	/* handle any trailing bytes */
+	/* Handle any trailing bytes */
 	nbytes &= 0x03
 
 	if nbytes != 0 {
@@ -384,7 +384,7 @@ func shn_encrypt(c *shn_ctx, buf []byte, nbytes int) {
 	var endbuf []byte
 	var t uint32 = 0
 
-	/* handle any previously buffered bytes */
+	/* Handle any previously buffered bytes */
 	if c.nbuf != 0 {
 		for c.nbuf != 0 && nbytes != 0 {
 			c.mbuf ^= uint32(buf[0]) << uint(32-c.nbuf)
@@ -402,7 +402,7 @@ func shn_encrypt(c *shn_ctx, buf []byte, nbytes int) {
 		macfunc(c, c.mbuf)
 	}
 
-	/* handle whole words */
+	/* Handle whole words */
 	endbuf = buf[uint32(nbytes)&^(uint32(0x03)):]
 
 	for -cap(buf) < -cap(endbuf) {
@@ -414,7 +414,7 @@ func shn_encrypt(c *shn_ctx, buf []byte, nbytes int) {
 		buf = buf[4:]
 	}
 
-	/* handle any trailing bytes */
+	/* Handle any trailing bytes */
 	nbytes &= 0x03
 
 	if nbytes != 0 {
@@ -438,7 +438,7 @@ func shn_decrypt(c *shn_ctx, buf []byte, nbytes int) {
 	var endbuf []byte
 	var t uint32 = 0
 
-	/* handle any previously buffered bytes */
+	/* Handle any previously buffered bytes */
 	if c.nbuf != 0 {
 		for c.nbuf != 0 && nbytes != 0 {
 			buf[0] ^= byte((c.sbuf >> uint(32-c.nbuf)) & 0xFF)
@@ -456,7 +456,7 @@ func shn_decrypt(c *shn_ctx, buf []byte, nbytes int) {
 		macfunc(c, c.mbuf)
 	}
 
-	/* handle whole words */
+	/* Handle whole words */
 	endbuf = buf[uint32(nbytes)&^(uint32(0x03)):]
 
 	for -cap(buf) < -cap(endbuf) {
@@ -467,7 +467,7 @@ func shn_decrypt(c *shn_ctx, buf []byte, nbytes int) {
 		buf = buf[4:]
 	}
 
-	/* handle any trailing bytes */
+	/* Handle any trailing bytes */
 	nbytes &= 0x03
 
 	if nbytes != 0 {
@@ -491,7 +491,7 @@ func shn_decrypt(c *shn_ctx, buf []byte, nbytes int) {
 func shn_finish(c *shn_ctx, buf []byte, nbytes int) {
 	var i int
 
-	/* handle any previously buffered bytes */
+	/* Handle any previously buffered bytes */
 	if c.nbuf != 0 {
 		/* LFSR already cycled */
 		macfunc(c, c.mbuf)

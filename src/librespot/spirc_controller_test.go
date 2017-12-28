@@ -1,8 +1,8 @@
 package librespot
 
 import (
+	"Spotify"
 	"bytes"
-	Spotify "github.com/badfortrains/spotcontrol/proto"
 	"github.com/golang/protobuf/proto"
 	"testing"
 )
@@ -34,7 +34,7 @@ func (f *fakeServer) getResponse(t *testing.T) *mercuryResponse {
 		var err error
 		for ; response == nil && err == nil; response, err = f.mInternal.parseResponse(cmd, bytes.NewReader(data)) {
 			if err != nil {
-				t.Errorf("handle 0xbx %q ", err)
+				t.Errorf("Handle 0xbx %q ", err)
 			}
 		}
 		return response
