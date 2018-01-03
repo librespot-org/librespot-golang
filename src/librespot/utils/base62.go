@@ -1,4 +1,4 @@
-package librespot
+package utils
 
 import (
 	"math/big"
@@ -7,7 +7,7 @@ import (
 
 const alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-func convert62(id string) []byte {
+func Convert62(id string) []byte {
 	base := big.NewInt(62)
 
 	n := &big.Int{}

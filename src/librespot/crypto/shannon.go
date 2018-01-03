@@ -1,9 +1,10 @@
-package librespot
+package crypto
 
 import (
 	"bytes"
 	"encoding/binary"
 	"io"
+	"librespot/connection"
 	"log"
 )
 
@@ -25,10 +26,11 @@ func setKey(ctx *shn_ctx, key []uint8) {
 	shn_nonce(ctx, nonce, len(nonce))
 }
 
-func setupStream(keys sharedKeys, conn plainConnection) packetStream {
+// CreateStream initializes a new Shannon-encrypted PacketStream connection from the specified keys and plain connection
+func CreateStream(keys SharedKeys, conn connection.PlainConnection) connection.PacketStream {
 	s := &shannonStream{
-		reader: conn.reader,
-		writer: conn.writer,
+		reader: conn.Reader,
+		writer: conn.Writer,
 	}
 
 	setKey(&s.recvCipher, keys.recvKey)

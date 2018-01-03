@@ -1,4 +1,4 @@
-package librespot
+package crypto
 
 /* Shannon: Shannon stream cipher and MAC -- reference implementation */
 

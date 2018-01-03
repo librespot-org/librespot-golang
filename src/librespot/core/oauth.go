@@ -1,4 +1,4 @@
-package librespot
+package core
 
 import (
 	"encoding/json"
@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 )
 
 type OAuth struct {
@@ -51,10 +50,8 @@ func GetOauthAccessToken(code string, redirectUri string, clientId string, clien
 	return &auth, nil
 }
 
-func getOAuthToken() OAuth {
+func getOAuthToken(clientId string, clientSecret string) OAuth {
 	ch := make(chan OAuth)
-	clientId := os.Getenv("client_id")
-	clientSecret := os.Getenv("client_secret")
 
 	fmt.Println("go to this url")
 	urlPath := "https://accounts.spotify.com/authorize?" +

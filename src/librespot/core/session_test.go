@@ -1,4 +1,4 @@
-package librespot
+package core
 
 import (
 	"Spotify"
@@ -6,6 +6,10 @@ import (
 	"encoding/binary"
 	"github.com/golang/protobuf/proto"
 	"io"
+	"librespot/connection"
+	"librespot/crypto"
+	"librespot/mercury"
+	"librespot/spirc"
 	"math/big"
 	"testing"
 )
@@ -82,12 +86,12 @@ func TestLogin(t *testing.T) {
 		sendPackets: make(chan shanPacket),
 	}
 
-	s := &session{
+	s := &Session{
 		deviceId:           "testDevice",
-		keys:               generateKeysFromPrivate(big.NewInt(20.0), make([]byte, 10)),
+		keys:               crypto.GenerateKeysFromPrivate(big.NewInt(20.0), make([]byte, 10)),
 		tcpCon:             conn,
-		shannonConstructor: func(keys sharedKeys, conn plainConnection) packetStream { return fakeShan },
-		mercuryConstructor: setupMercury,
+		shannonConstructor: func(keys crypto.SharedKeys, conn connection.PlainConnection) connection.PacketStream { return fakeShan },
+		mercuryConstructor: mercury.CreateMercury,
 	}
 
 	serverResponse := &Spotify.APResponseMessage{
@@ -113,11 +117,11 @@ func TestLogin(t *testing.T) {
 
 	result := make(chan []byte, 2)
 	go func() {
-		controller, err := s.loginSession("testUser", "123", "myDevice")
-		if controller == nil || err != nil {
+		err := s.loginSession("testUser", "123", "myDevice")
+		if err != nil {
 			t.Errorf("bad return values")
 		}
-		result <- controller.SavedCredentials
+		result <- s.reusableAuthBlob
 	}()
 
 	//Get the login packet sent to the spotify server from spotcontrol
@@ -169,12 +173,12 @@ func TestHello(t *testing.T) {
 		sendPackets: make(chan shanPacket, 2),
 	}
 
-	s := &session{
+	s := &Session{
 		stream:   &stream,
 		deviceId: "testDevice",
 	}
-	s.mercury = setupMercury(s)
-	controller := setupController(s, "fakeUser", []byte{})
+	s.mercury = mercury.CreateMercury(&stream)
+	controller := spirc.CreateController(s, []byte{})
 
 	go controller.SendHello()
 

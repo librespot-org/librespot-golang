@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"librespot"
+	"librespot/core"
+	"librespot/spirc"
 	"os"
 	"strconv"
 	"strings"
@@ -12,7 +14,7 @@ import (
 
 const defaultdevicename = "librespot"
 
-func chooseDevice(controller *librespot.SpircController, reader *bufio.Reader) string {
+func chooseDevice(controller *spirc.Controller, reader *bufio.Reader) string {
 	devices := controller.ListDevices()
 	if len(devices) == 0 {
 		fmt.Println("no devices")
@@ -36,7 +38,7 @@ func chooseDevice(controller *librespot.SpircController, reader *bufio.Reader) s
 	}
 }
 
-func getDevice(controller *librespot.SpircController, ident string, reader *bufio.Reader) string {
+func getDevice(controller *spirc.Controller, ident string, reader *bufio.Reader) string {
 	if ident != "" {
 		return ident
 	} else {
@@ -44,7 +46,7 @@ func getDevice(controller *librespot.SpircController, ident string, reader *bufi
 	}
 }
 
-func addMdns(controller *librespot.SpircController, reader *bufio.Reader) {
+func addMdns(controller *spirc.Controller, reader *bufio.Reader) {
 	devices, err := controller.ListMdnsDevices()
 	if err != nil {
 		fmt.Println("Mdns devices can only be found when micro-controller is started \n" +
@@ -95,22 +97,23 @@ func main() {
 	username := flag.String("username", "", "spotify username")
 	password := flag.String("password", "", "spotify password")
 	blobPath := flag.String("blobPath", "", "path to saved blob")
-	indentFlag := flag.String("ident", "", "intially selected ident")
+	identFlag := flag.String("ident", "", "intially selected ident")
 	devicename := flag.String("devicename", defaultdevicename, "name of device")
 	flag.Parse()
 
-	var sController *librespot.SpircController
+	var session *core.Session
 	var err error
+
 	if *username != "" && *password != "" {
-		sController, err = librespot.Login(*username, *password, *devicename)
+		session, err = librespot.Login(*username, *password, *devicename)
 	} else if *blobPath != "" {
 		if _, err = os.Stat(*blobPath); os.IsNotExist(err) {
-			sController, err = librespot.LoginDiscovery(*blobPath, *devicename)
+			session, err = librespot.LoginDiscovery(*blobPath, *devicename)
 		} else {
-			sController, err = librespot.LoginBlobFile(*blobPath, *devicename)
+			session, err = librespot.LoginDiscoveryBlobFile(*blobPath, *devicename)
 		}
 	} else if os.Getenv("client_secret") != "" {
-		sController, err = librespot.LoginOauth(*devicename)
+		session, err = librespot.LoginOAuth(*devicename, os.Getenv("client_id"), os.Getenv("client_secret"))
 	} else {
 		fmt.Println("need to supply a username and password or a blob file path")
 		fmt.Println("./spirccontroller --blobPath ./path/to/blob")
@@ -124,8 +127,10 @@ func main() {
 		return
 	}
 
+	sController := spirc.CreateController(session, session.ReusableAuthBlob())
+
 	reader := bufio.NewReader(os.Stdin)
-	ident := *indentFlag
+	ident := *identFlag
 	printHelp()
 	for {
 		fmt.Print("Enter a command: ")

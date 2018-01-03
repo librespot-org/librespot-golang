@@ -1,18 +1,21 @@
-package librespot
+package mercury
 
 import (
 	"Spotify"
 	"encoding/binary"
 	"github.com/golang/protobuf/proto"
+	"librespot/connection"
+	"librespot/core"
+	"librespot/spirc"
 	"testing"
 )
 
-func setupTestController(stream packetStream) *SpircController {
-	s := &session{
+func setupTestController(stream connection.PacketStream) *spirc.Controller {
+	s := &core.Session{
 		stream:   stream,
 		deviceId: "testDevice",
 	}
-	s.mercury = setupMercury(s)
+	s.mercury = CreateMercury(s)
 	return setupController(s, "fakeUser", []byte{})
 }
 
@@ -52,13 +55,13 @@ func TestMultiPart(t *testing.T) {
 	p2.Write(body)
 
 	didRecieveCallback := false
-	controller.session.mercurySendRequest(mercuryRequest{
-		method:  "SEND",
-		uri:     "hm://searchview/km/v2/search/Future",
-		payload: [][]byte{},
-	}, func(res mercuryResponse) {
+	controller.session.mercurySendRequest(Request{
+		Method:  "SEND",
+		Uri:     "hm://searchview/km/v2/search/Future",
+		Payload: [][]byte{},
+	}, func(res Response) {
 		didRecieveCallback = true
-		if string(res.payload[0]) != string(body) {
+		if string(res.Payload[0]) != string(body) {
 			t.Errorf("bad body received")
 		}
 	})

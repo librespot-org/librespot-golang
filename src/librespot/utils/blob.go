@@ -1,4 +1,4 @@
-package librespot
+package utils
 
 import (
 	"bytes"
@@ -11,33 +11,21 @@ import (
 	"encoding/json"
 	"errors"
 	"golang.org/x/crypto/pbkdf2"
+	"librespot/crypto"
 	"log"
 	"math/big"
 	"os"
 )
 
+// BlobInfo is the structure holding authentication blob data. The blob is an encoded/encrypted byte array (encoded
+// as base64), holding the encryption keys, the deviceId, and the username.
 type BlobInfo struct {
 	Username    string
 	DecodedBlob string
 }
 
-func (b *BlobInfo) saveToFile(path string) error {
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	err = encoder.Encode(b)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func blobFromFile(path string) (BlobInfo, error) {
+// BlobFromFile restores a Blob from the specified path
+func BlobFromFile(path string) (BlobInfo, error) {
 	result := BlobInfo{}
 	file, err := os.Open(path)
 	if err != nil {
@@ -54,8 +42,9 @@ func blobFromFile(path string) (BlobInfo, error) {
 	return result, nil
 }
 
-func newBlobInfo(blob64 string, client64 string,
-	keys privateKeys, deviceId string, username string) (BlobInfo, error) {
+// NewBlobInfo creates a new BlobInfo structure with the blob data filled in DecodedBlob field
+func NewBlobInfo(blob64 string, client64 string,
+	keys crypto.PrivateKeys, deviceId string, username string) (BlobInfo, error) {
 
 	partDecoded, err := decodeBlob(blob64, client64, keys)
 	if err != nil {
@@ -71,7 +60,8 @@ func newBlobInfo(blob64 string, client64 string,
 	}, nil
 }
 
-func (b *BlobInfo) makeAuthBlob(deviceId string, client64 string, dhKeys privateKeys) (string, error) {
+// MakeAuthBlob builds an encoded blob in order to authenticate against Spotify services
+func (b *BlobInfo) MakeAuthBlob(deviceId string, client64 string, dhKeys crypto.PrivateKeys) (string, error) {
 	secret := sha1.Sum([]byte(deviceId))
 	key := blobKey(b.Username, secret[:])
 
@@ -85,6 +75,23 @@ func (b *BlobInfo) makeAuthBlob(deviceId string, client64 string, dhKeys private
 	return fullEncoded, nil
 }
 
+// SaveToFile saves the current blob to the specified path
+func (b *BlobInfo) SaveToFile(path string) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	err = encoder.Encode(b)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func blobKey(username string, secret []byte) []byte {
 	data := pbkdf2.Key(secret, []byte(username), 0x100, 20, sha1.New)[0:20]
 
@@ -94,11 +101,11 @@ func blobKey(username string, secret []byte) []byte {
 	return append(hash[:], length...)
 }
 
-func makeBlob(blobPart []byte, keys privateKeys, publicKey string) string {
+func makeBlob(blobPart []byte, keys crypto.PrivateKeys, publicKey string) string {
 	part := []byte(base64.StdEncoding.EncodeToString(blobPart))
 
 	sharedKey := keys.SharedKey(publicKey)
-	iv := randomVec(16)
+	iv := crypto.RandomVec(16)
 
 	key := sha1.Sum(sharedKey)
 	base_key := key[:16]
@@ -149,7 +156,7 @@ func encryptBlob(blob []byte, key []byte) []byte {
 	return encoded
 }
 
-func decodeBlob(blob64 string, client64 string, keys privateKeys) (string, error) {
+func decodeBlob(blob64 string, client64 string, keys crypto.PrivateKeys) (string, error) {
 
 	clientKey, err := base64.StdEncoding.DecodeString(client64)
 	if err != nil {
@@ -164,7 +171,7 @@ func decodeBlob(blob64 string, client64 string, keys privateKeys) (string, error
 	clientKey_be := new(big.Int)
 	clientKey_be.SetBytes(clientKey)
 
-	sharedKey := powm(clientKey_be, keys.privateKey, keys.prime)
+	sharedKey := crypto.Powm(clientKey_be, keys.PrivateKey(), keys.Prime())
 	iv := blobBytes[0:16]
 	encryptedPart := blobBytes[16 : len(blobBytes)-20]
 	ckSum := blobBytes[len(blobBytes)-20:]

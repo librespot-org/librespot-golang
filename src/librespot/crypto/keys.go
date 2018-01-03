@@ -1,4 +1,4 @@
-package librespot
+package crypto
 
 import (
 	"crypto/hmac"
@@ -9,7 +9,7 @@ import (
 	"math/big"
 )
 
-type privateKeys struct {
+type PrivateKeys struct {
 	privateKey *big.Int
 	publicKey  *big.Int
 
@@ -18,13 +18,13 @@ type privateKeys struct {
 	clientNonce []byte
 }
 
-type sharedKeys struct {
+type SharedKeys struct {
 	challenge []byte
 	sendKey   []byte
 	recvKey   []byte
 }
 
-func randomVec(count int) []byte {
+func RandomVec(count int) []byte {
 	c := count
 	b := make([]byte, c)
 	_, err := rand.Read(b)
@@ -34,7 +34,7 @@ func randomVec(count int) []byte {
 	return b
 }
 
-func powm(base, exp, modulus *big.Int) *big.Int {
+func Powm(base, exp, modulus *big.Int) *big.Int {
 	exp2 := big.NewInt(0).SetBytes(exp.Bytes())
 	base2 := big.NewInt(0).SetBytes(base.Bytes())
 	modulus2 := big.NewInt(0).SetBytes(modulus.Bytes())
@@ -54,15 +54,15 @@ func powm(base, exp, modulus *big.Int) *big.Int {
 	return result
 }
 
-func generateKeys() privateKeys {
+func GenerateKeys() PrivateKeys {
 	private := new(big.Int)
-	private.SetBytes(randomVec(95))
-	nonce := randomVec(0x10)
+	private.SetBytes(RandomVec(95))
+	nonce := RandomVec(0x10)
 
-	return generateKeysFromPrivate(private, nonce)
+	return GenerateKeysFromPrivate(private, nonce)
 }
 
-func generateKeysFromPrivate(private *big.Int, nonce []byte) privateKeys {
+func GenerateKeysFromPrivate(private *big.Int, nonce []byte) PrivateKeys {
 	DH_GENERATOR := big.NewInt(0x2)
 	DH_PRIME := new(big.Int)
 	DH_PRIME.SetBytes([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc9,
@@ -77,9 +77,9 @@ func generateKeysFromPrivate(private *big.Int, nonce []byte) privateKeys {
 		0x4c, 0x42, 0xe9, 0xa6, 0x3a, 0x36, 0x20, 0xff, 0xff,
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff})
 
-	return privateKeys{
+	return PrivateKeys{
 		privateKey: private,
-		publicKey:  powm(DH_GENERATOR, private, DH_PRIME),
+		publicKey:  Powm(DH_GENERATOR, private, DH_PRIME),
 
 		generator:   DH_GENERATOR,
 		prime:       DH_PRIME,
@@ -87,10 +87,10 @@ func generateKeysFromPrivate(private *big.Int, nonce []byte) privateKeys {
 	}
 }
 
-func (p *privateKeys) addRemoteKey(remote []byte, clientPacket []byte, serverPacket []byte) sharedKeys {
+func (p *PrivateKeys) AddRemoteKey(remote []byte, clientPacket []byte, serverPacket []byte) SharedKeys {
 	remote_be := new(big.Int)
 	remote_be.SetBytes(remote)
-	shared_key := powm(remote_be, p.privateKey, p.prime)
+	shared_key := Powm(remote_be, p.privateKey, p.prime)
 
 	data := make([]byte, 0, 100)
 	mac := hmac.New(sha1.New, shared_key.Bytes())
@@ -107,23 +107,39 @@ func (p *privateKeys) addRemoteKey(remote []byte, clientPacket []byte, serverPac
 	mac.Write(clientPacket)
 	mac.Write(serverPacket)
 
-	return sharedKeys{
+	return SharedKeys{
 		challenge: mac.Sum(nil),
 		sendKey:   data[0x14:0x34],
 		recvKey:   data[0x34:0x54],
 	}
 }
 
-func (p *privateKeys) SharedKey(publicKey string) []byte {
+func (p *PrivateKeys) SharedKey(publicKey string) []byte {
 	publicKeyBytes, _ := base64.StdEncoding.DecodeString(publicKey)
 
 	publicBig := new(big.Int)
 	publicBig.SetBytes(publicKeyBytes)
 
-	sharedKey := powm(publicBig, p.privateKey, p.prime)
+	sharedKey := Powm(publicBig, p.privateKey, p.prime)
 	return sharedKey.Bytes()
 }
 
-func (p *privateKeys) pubKey() []byte {
+func (p *PrivateKeys) PubKey() []byte {
 	return p.publicKey.Bytes()
+}
+
+func (p *PrivateKeys) PrivateKey() *big.Int {
+	return p.privateKey
+}
+
+func (p *PrivateKeys) Prime() *big.Int {
+	return p.prime
+}
+
+func (p *PrivateKeys) ClientNonce() []byte {
+	return p.clientNonce
+}
+
+func (s *SharedKeys) Challenge() []byte {
+	return s.challenge
 }

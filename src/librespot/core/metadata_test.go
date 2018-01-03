@@ -1,4 +1,4 @@
-package librespot
+package core
 
 import "testing"
 

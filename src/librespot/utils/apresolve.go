@@ -1,4 +1,4 @@
-package librespot
+package utils
 
 import (
 	"encoding/json"

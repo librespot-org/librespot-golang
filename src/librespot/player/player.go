@@ -1,13 +1,14 @@
-package librespot
+package player
 
 import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"librespot/core"
 )
 
 type Player struct {
-	session session
+	session core.Session
 	seq     uint32
 }
 

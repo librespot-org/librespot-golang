@@ -1,30 +1,32 @@
-package librespot
+package spirc
 
 import (
 	"Spotify"
 	"bytes"
 	"github.com/golang/protobuf/proto"
+	"librespot/connection"
+	"librespot/mercury"
 	"testing"
 )
 
 type fakeServer struct {
-	stream    packetStream
-	responses []mercuryResponse
-	mInternal *mercuryInternal
+	stream    connection.PacketStream
+	responses []mercury.Response
+	mInternal *mercury.Internal
 }
 
-func setupFakeServer(stream packetStream) *fakeServer {
+func setupFakeServer(stream connection.PacketStream) *fakeServer {
 	return &fakeServer{
 		stream:    stream,
-		responses: make([]mercuryResponse, 5),
-		mInternal: &mercuryInternal{
-			pending: make(map[string]mercuryPending),
+		responses: make([]mercury.Response, 5),
+		mInternal: &mercury.Internal{
+			pending: make(map[string]mercury.Pending),
 			stream:  stream,
 		},
 	}
 }
 
-func (f *fakeServer) getResponse(t *testing.T) *mercuryResponse {
+func (f *fakeServer) getResponse(t *testing.T) *mercury.Response {
 	cmd, data, err := f.stream.RecvPacket()
 	if err != nil {
 		t.Error("poll error", err)
@@ -51,7 +53,7 @@ func (f *fakeServer) getResponseFrame(t *testing.T) (*Spotify.Frame, *mercuryRes
 	return frame, response
 }
 
-func setupContollerAndServer(t *testing.T) (*SpircController, *fakeServer) {
+func setupContollerAndServer(t *testing.T) (*Controller, *fakeServer) {
 	sessionStream := &fakeStream{
 		recvPackets: make(chan shanPacket, 5),
 		sendPackets: make(chan shanPacket, 5),
@@ -69,7 +71,7 @@ func setupContollerAndServer(t *testing.T) (*SpircController, *fakeServer) {
 		deviceId: "testDevice",
 	}
 	s.mercury = setupMercury(s)
-	controller := setupController(s, "fakeUser", []byte{})
+	controller := CreateController(s, "fakeUser", []byte{})
 	return controller, server
 }
 

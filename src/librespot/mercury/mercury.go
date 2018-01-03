@@ -1,4 +1,4 @@
-package librespot
+package mercury
 
 import (
 	"Spotify"
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"io"
+	"librespot/connection"
 	"sync"
 )
 
@@ -14,55 +15,55 @@ import (
 // PUB/SUB system, where you, as an audio sink, subscribes to the events of a specified user (playlist changes) but
 // also access various metadata normally fetched by external players (tracks metadata, playlists, artists, etc).
 
-type mercuryResponse struct {
-	headerData []byte
-	uri        string
-	payload    [][]byte
-	statusCode int32
-	seqKey     string
+type Response struct {
+	HeaderData []byte
+	Uri        string
+	Payload    [][]byte
+	StatusCode int32
+	SeqKey     string
 }
 
-type mercuryRequest struct {
-	method      string
-	uri         string
-	contentType string
-	payload     [][]byte
+type Request struct {
+	Method      string
+	Uri         string
+	ContentType string
+	Payload     [][]byte
 }
 
-type responseCallback func(mercuryResponse)
+type Callback func(Response)
 
-type mercuryPending struct {
+type Pending struct {
 	parts   [][]byte
 	partial []byte
 }
 
-type mercuryInternal struct {
+type Internal struct {
 	seqLock sync.Mutex
 	nextSeq uint32
-	pending map[string]mercuryPending
-	stream  packetStream
+	pending map[string]Pending
+	stream  connection.PacketStream
 }
 
-type mercuryClient struct {
-	subscriptions map[string][]chan mercuryResponse
-	callbacks     map[string]responseCallback
-	internal      *mercuryInternal
+type Client struct {
+	subscriptions map[string][]chan Response
+	callbacks     map[string]Callback
+	internal      *Internal
 }
 
-type mercuryConnection interface {
-	Subscribe(uri string, recv chan mercuryResponse, cb responseCallback) error
-	Request(req mercuryRequest, cb responseCallback) (err error)
+type Connection interface {
+	Subscribe(uri string, recv chan Response, cb Callback) error
+	Request(req Request, cb Callback) (err error)
 	Handle(cmd uint8, reader io.Reader) (err error)
 }
 
-// setupMercury initializes a mercuryConnection for the specified session.
-func setupMercury(s *session) mercuryConnection {
-	client := &mercuryClient{
-		callbacks:     make(map[string]responseCallback),
-		subscriptions: make(map[string][]chan mercuryResponse),
-		internal: &mercuryInternal{
-			pending: make(map[string]mercuryPending),
-			stream:  s.stream,
+// CreateMercury initializes a Connection for the specified session.
+func CreateMercury(stream connection.PacketStream) Connection {
+	client := &Client{
+		callbacks:     make(map[string]Callback),
+		subscriptions: make(map[string][]chan Response),
+		internal: &Internal{
+			pending: make(map[string]Pending),
+			stream:  stream,
 		},
 	}
 	return client
@@ -70,13 +71,13 @@ func setupMercury(s *session) mercuryConnection {
 
 // Subscribe subscribes the specified receiving channel to the specified URI, and calls the callback function
 // whenever there's an event happening.
-func (m *mercuryClient) Subscribe(uri string, recv chan mercuryResponse, cb responseCallback) error {
+func (m *Client) Subscribe(uri string, recv chan Response, cb Callback) error {
 	m.addChannelSubscriber(uri, recv)
-	err := m.Request(mercuryRequest{
-		method: "SUB",
-		uri:    uri,
-	}, func(response mercuryResponse) {
-		for _, part := range response.payload {
+	err := m.Request(Request{
+		Method: "SUB",
+		Uri:    uri,
+	}, func(response Response) {
+		for _, part := range response.Payload {
 			sub := &Spotify.Subscription{}
 			err := proto.Unmarshal(part, sub)
 			if err == nil && *sub.Uri != uri {
@@ -89,26 +90,34 @@ func (m *mercuryClient) Subscribe(uri string, recv chan mercuryResponse, cb resp
 	return err
 }
 
-func (m *mercuryClient) addChannelSubscriber(uri string, recv chan mercuryResponse) {
+func (m *Client) addChannelSubscriber(uri string, recv chan Response) {
 	chList, ok := m.subscriptions[uri]
 	if !ok {
-		chList = make([]chan mercuryResponse, 0)
+		chList = make([]chan Response, 0)
 	}
 
 	chList = append(chList, recv)
 	m.subscriptions[uri] = chList
 }
 
-func (m *mercuryClient) Request(req mercuryRequest, cb responseCallback) (err error) {
+func (m *Client) Request(req Request, cb Callback) (err error) {
 	seq, err := m.internal.request(req)
 	if err != nil {
+		// Call the callback with a 500 error-code so that the request doesn't remain pending in case of error
+		if cb != nil {
+			cb(Response{
+				StatusCode: 500,
+			})
+		}
+
 		return err
 	}
+
 	m.callbacks[string(seq)] = cb
 	return nil
 }
 
-func (m *mercuryInternal) request(req mercuryRequest) (seqKey string, err error) {
+func (m *Internal) request(req Request) (seqKey string, err error) {
 	m.seqLock.Lock()
 	seq := make([]byte, 4)
 	binary.BigEndian.PutUint32(seq, m.nextSeq)
@@ -121,9 +130,9 @@ func (m *mercuryInternal) request(req mercuryRequest) (seqKey string, err error)
 
 	var cmd uint8
 	switch {
-	case req.method == "SUB":
+	case req.Method == "SUB":
 		cmd = 0xb3
-	case req.method == "UNSUB":
+	case req.Method == "UNSUB":
 		cmd = 0xb4
 	default:
 		cmd = 0xb2
@@ -159,19 +168,19 @@ func encodeMercuryHead(seq []byte, partsLength uint16, flags uint8) (*bytes.Buff
 	return buf, nil
 }
 
-func encodeRequest(seq []byte, req mercuryRequest) ([]byte, error) {
-	buf, err := encodeMercuryHead(seq, uint16(1+len(req.payload)), uint8(1))
+func encodeRequest(seq []byte, req Request) ([]byte, error) {
+	buf, err := encodeMercuryHead(seq, uint16(1+len(req.Payload)), uint8(1))
 	if err != nil {
 		return nil, err
 	}
 
 	header := &Spotify.Header{
-		Uri:    proto.String(req.uri),
-		Method: proto.String(req.method),
+		Uri:    proto.String(req.Uri),
+		Method: proto.String(req.Method),
 	}
 
-	if req.contentType != "" {
-		header.ContentType = proto.String(req.contentType)
+	if req.ContentType != "" {
+		header.ContentType = proto.String(req.ContentType)
 	}
 
 	headerData, err := proto.Marshal(header)
@@ -184,7 +193,7 @@ func encodeRequest(seq []byte, req mercuryRequest) ([]byte, error) {
 		return nil, err
 	}
 
-	for _, p := range req.payload {
+	for _, p := range req.Payload {
 		err = binary.Write(buf, binary.BigEndian, uint16(len(p)))
 		if err != nil {
 			return nil, err
@@ -225,21 +234,21 @@ func handleHead(reader io.Reader) (seq []byte, flags uint8, count uint16, err er
 	return
 }
 
-func (m *mercuryClient) Handle(cmd uint8, reader io.Reader) (err error) {
+func (m *Client) Handle(cmd uint8, reader io.Reader) (err error) {
 	response, err := m.internal.parseResponse(cmd, reader)
 	if err != nil {
 		return
 	}
 	if response != nil {
 		if cmd == 0xb5 {
-			chList, ok := m.subscriptions[response.uri]
+			chList, ok := m.subscriptions[response.Uri]
 			if ok {
 				for _, ch := range chList {
 					ch <- *response
 				}
 			}
-		} else if cb, ok := m.callbacks[response.seqKey]; ok {
-			delete(m.callbacks, response.seqKey)
+		} else if cb, ok := m.callbacks[response.SeqKey]; ok {
+			delete(m.callbacks, response.SeqKey)
 			cb(*response)
 		}
 	}
@@ -247,7 +256,7 @@ func (m *mercuryClient) Handle(cmd uint8, reader io.Reader) (err error) {
 
 }
 
-func (m *mercuryInternal) parseResponse(cmd uint8, reader io.Reader) (response *mercuryResponse, err error) {
+func (m *Internal) parseResponse(cmd uint8, reader io.Reader) (response *Response, err error) {
 	seq, flags, count, err := handleHead(reader)
 	if err != nil {
 		fmt.Println("error handling response", err)
@@ -258,9 +267,9 @@ func (m *mercuryInternal) parseResponse(cmd uint8, reader io.Reader) (response *
 	pending, ok := m.pending[seqKey]
 
 	if !ok && cmd == 0xb5 {
-		pending = mercuryPending{}
+		pending = Pending{}
 	} else if !ok {
-		//log.Print("ignoring seq ", seqKey)
+		//log.Print("ignoring seq ", SeqKey)
 	}
 
 	for i := uint16(0); i < count; i++ {
@@ -291,7 +300,7 @@ func (m *mercuryInternal) parseResponse(cmd uint8, reader io.Reader) (response *
 	return nil, nil
 }
 
-func (m *mercuryInternal) completeRequest(cmd uint8, pending mercuryPending, seqKey string) (response *mercuryResponse, err error) {
+func (m *Internal) completeRequest(cmd uint8, pending Pending, seqKey string) (response *Response, err error) {
 	headerData := pending.parts[0]
 	header := &Spotify.Header{}
 	err = proto.Unmarshal(headerData, header)
@@ -299,12 +308,12 @@ func (m *mercuryInternal) completeRequest(cmd uint8, pending mercuryPending, seq
 		return nil, err
 	}
 
-	return &mercuryResponse{
-		headerData: headerData,
-		uri:        *header.Uri,
-		payload:    pending.parts[1:],
-		statusCode: header.GetStatusCode(),
-		seqKey:     seqKey,
+	return &Response{
+		HeaderData: headerData,
+		Uri:        *header.Uri,
+		Payload:    pending.parts[1:],
+		StatusCode: header.GetStatusCode(),
+		SeqKey:     seqKey,
 	}, nil
 
 }
@@ -315,4 +324,12 @@ func parsePart(reader io.Reader) ([]byte, error) {
 	buf := make([]byte, size)
 	_, err := io.ReadFull(reader, buf)
 	return buf, err
+}
+
+func (res *Response) CombinePayload() []byte {
+	body := make([]byte, 0)
+	for _, p := range res.Payload {
+		body = append(body, p...)
+	}
+	return body
 }
