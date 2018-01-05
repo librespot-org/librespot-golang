@@ -45,11 +45,14 @@ func (p *Player) LoadTrack(trackId []byte, fileId []byte) (*AudioFile, error) {
 
 	log.Println("[player] Fetching audio data")
 
-	// Allocate a channel
+	// Allocate an AudioFile and a channel
 	channel := p.AllocateChannel()
-
-	// Allocate an AudioFile
 	audioFile := NewAudioFile(fileId, channel, p.stream)
+
+	channel.onHeader = headerFunc(audioFile.onChannelHeader)
+	channel.onData = dataFunc(audioFile.onChannelData)
+
+	// Start loading the audio
 	err = audioFile.Load()
 
 	return audioFile, err
@@ -57,8 +60,6 @@ func (p *Player) LoadTrack(trackId []byte, fileId []byte) (*AudioFile, error) {
 
 func (p *Player) AllocateChannel() *Channel {
 	channel := NewChannel(p.nextChan, p.releaseChannel)
-	channel.onHeader = headerFunc(p.onChannelHeader)
-	channel.onData = dataFunc(p.onChannelData)
 	p.nextChan++
 
 	p.channels[channel.num] = channel
@@ -108,28 +109,4 @@ func (p *Player) buildKeyRequest(trackId []byte, fileId []byte) []byte {
 func (p *Player) releaseChannel(channel *Channel) {
 	delete(p.channels, channel.num)
 	fmt.Printf("[player] Released channel %d\n", channel.num)
-}
-
-func (p *Player) onChannelHeader(channel *Channel, id byte, data *bytes.Reader) uint16 {
-	read := uint16(0)
-
-	if id == 0x3 {
-		var size uint32
-		binary.Read(data, binary.BigEndian, &size)
-		fmt.Printf("[player] Audio file size: %d bytes\n", size)
-
-		// Return 4 bytes read
-		read = 4
-	}
-
-	return read
-}
-
-func (p *Player) onChannelData(channel *Channel, data *bytes.Reader) uint16 {
-	if data != nil {
-		fmt.Printf("[player] Got audio channel data!\n")
-	} else {
-		fmt.Printf("[player] Got EOF (nil) audio data!\n")
-	}
-	return 0
 }

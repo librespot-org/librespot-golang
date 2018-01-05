@@ -17,6 +17,7 @@ type AudioFile struct {
 	FileId  []byte
 	Channel *Channel
 	Stream  connection.PacketStream
+	responseChan chan bool
 }
 
 func NewAudioFile(fileId []byte, channel *Channel, stream connection.PacketStream) *AudioFile {
@@ -24,12 +25,12 @@ func NewAudioFile(fileId []byte, channel *Channel, stream connection.PacketStrea
 		Channel: channel,
 		FileId:  fileId,
 		Stream:  stream,
+		responseChan: make(chan bool),
 	}
 }
 
 func (a *AudioFile) Load() error {
 	// Request audio data
-
 	for i := 0; i < a.TotalChunks(); i++ {
 		err := a.Stream.SendPacket(0x8, buildAudioChunkRequest(a.Channel.num, a.FileId, uint32(i*kChunkSize), uint32((i+1)*kChunkSize)))
 
@@ -58,6 +59,31 @@ func (a *AudioFile) PutEncryptedChunk(index int, data []byte) {
 	copy(a.Data[byteIndex:], decryptedData)
 	a.Chunks[index] = true
 }
+
+func (a *AudioFile) onChannelHeader(channel *Channel, id byte, data *bytes.Reader) uint16 {
+	read := uint16(0)
+
+	if id == 0x3 {
+		var size uint32
+		binary.Read(data, binary.BigEndian, &size)
+		fmt.Printf("[audiofile] Audio file size: %d bytes\n", size)
+
+		// Return 4 bytes read
+		read = 4
+	}
+
+	return read
+}
+
+func (a *AudioFile) onChannelData(channel *Channel, data *bytes.Reader) uint16 {
+	if data != nil {
+		fmt.Printf("[audiofile] Got audio channel data!\n")
+	} else {
+		fmt.Printf("[audiofile] Got EOF (nil) audio data!\n")
+	}
+	return 0
+}
+
 
 func buildAudioChunkRequest(channel uint16, fileId []byte, start uint32, end uint32) []byte {
 	buf := new(bytes.Buffer)
