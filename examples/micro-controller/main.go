@@ -162,7 +162,7 @@ func main() {
 		case cmds[0] == "help":
 			printHelp()
 		case cmds[0] == "playlist":
-			playlist, err := sController.GetPlaylist(cmds[1])
+			playlist, err := session.Mercury().GetPlaylist(cmds[1])
 			if err != nil || playlist.Contents == nil {
 				fmt.Println("Playlist not found")
 				break
@@ -178,7 +178,7 @@ func main() {
 				sController.LoadTrack(ident, ids)
 			}
 		case cmds[0] == "rootlist":
-			playlist, _ := sController.GetRootPlaylist()
+			playlist, _ := session.Mercury().GetRootPlaylist(session.Username())
 			if err != nil || playlist.Contents == nil {
 				fmt.Println("Error getting root list")
 				break
@@ -187,7 +187,7 @@ func main() {
 			for i := 0; i < len(items); i++ {
 				id := strings.TrimPrefix(items[i].GetUri(), "spotify:")
 				id = strings.Replace(id, ":", "/", -1)
-				list, _ := sController.GetPlaylist(id)
+				list, _ := session.Mercury().GetPlaylist(id)
 				fmt.Println(list.Attributes.GetName(), id)
 			}
 		}

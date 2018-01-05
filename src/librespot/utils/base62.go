@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"math/big"
 	"strings"
 )
@@ -45,4 +46,8 @@ func ConvertTo62(raw []byte) string {
 		result += "0"
 	}
 	return reverse(result)
+}
+
+func Base62ToHex(b62 string) string {
+	return fmt.Sprintf("%x", Convert62(b62))
 }

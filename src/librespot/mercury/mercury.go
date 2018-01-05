@@ -57,7 +57,7 @@ type Connection interface {
 }
 
 // CreateMercury initializes a Connection for the specified session.
-func CreateMercury(stream connection.PacketStream) Connection {
+func CreateMercury(stream connection.PacketStream) *Client {
 	client := &Client{
 		callbacks:     make(map[string]Callback),
 		subscriptions: make(map[string][]chan Response),
@@ -117,12 +117,22 @@ func (m *Client) Request(req Request, cb Callback) (err error) {
 	return nil
 }
 
-func (m *Internal) request(req Request) (seqKey string, err error) {
+func (m *Client) NextSeq() []byte {
+	return m.internal.NextSeq()
+}
+
+func (m *Internal) NextSeq() []byte {
 	m.seqLock.Lock()
 	seq := make([]byte, 4)
 	binary.BigEndian.PutUint32(seq, m.nextSeq)
 	m.nextSeq += 1
 	m.seqLock.Unlock()
+
+	return seq
+}
+
+func (m *Internal) request(req Request) (seqKey string, err error) {
+	seq := m.NextSeq()
 	data, err := encodeRequest(seq, req)
 	if err != nil {
 		return "", err
@@ -147,6 +157,8 @@ func (m *Internal) request(req Request) (seqKey string, err error) {
 }
 
 func encodeMercuryHead(seq []byte, partsLength uint16, flags uint8) (*bytes.Buffer, error) {
+	fmt.Printf("Mercury Head seq: %d\n", seq)
+
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.BigEndian, uint16(len(seq)))
 	if err != nil {

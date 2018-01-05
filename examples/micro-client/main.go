@@ -1,12 +1,16 @@
 package main
 
 import (
+	"Spotify"
 	"bufio"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"librespot"
+	"librespot/core"
+	"librespot/spirc"
+	"librespot/utils"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -26,30 +30,37 @@ func printHelp() {
 }
 
 func main() {
+	// Read flags from commandline
 	username := flag.String("username", "", "spotify username")
 	password := flag.String("password", "", "spotify password")
-	blobPath := flag.String("blobPath", "", "path to saved blob")
-	indentFlag := flag.String("ident", "", "intially selected ident")
+	blob := flag.String("blob", "", "spotify auth blob")
 	devicename := flag.String("devicename", defaultdevicename, "name of device")
 	flag.Parse()
 
-	var sController *librespot.SpircController
+	// Authenticate
+	var session *core.Session
 	var err error
+
 	if *username != "" && *password != "" {
-		sController, err = librespot.Login(*username, *password, *devicename)
-	} else if *blobPath != "" {
-		if _, err = os.Stat(*blobPath); os.IsNotExist(err) {
-			sController, err = librespot.LoginDiscovery(*blobPath, *devicename)
-		} else {
-			sController, err = librespot.LoginBlobFile(*blobPath, *devicename)
+		session, err = librespot.Login(*username, *password, *devicename)
+
+		fmt.Println("Login blob: ", base64.StdEncoding.EncodeToString(session.ReusableAuthBlob()))
+	} else if *blob != "" && *username != "" {
+		blobBytes, err := base64.StdEncoding.DecodeString(*blob)
+
+		if err != nil {
+			fmt.Println("Invalid blob base64")
+			return
 		}
+
+		session, err = librespot.LoginSaved(*username, blobBytes, *devicename)
 	} else if os.Getenv("client_secret") != "" {
-		sController, err = librespot.LoginOauth(*devicename)
+		session, err = librespot.LoginOAuth(*devicename, os.Getenv("client_id"), os.Getenv("client_secret"))
 	} else {
 		fmt.Println("need to supply a username and password or a blob file path")
-		fmt.Println("./spirccontroller --blobPath ./path/to/blob")
+		fmt.Println("./microclient --username SPOTIFY_USERNAME --blob ./path/to/blob")
 		fmt.Println("or")
-		fmt.Println("./spirccontroller --username SPOTIFY_USERNAME --password SPOTIFY_PASSWORD")
+		fmt.Println("./microclient --username SPOTIFY_USERNAME --password SPOTIFY_PASSWORD")
 		return
 	}
 
@@ -58,56 +69,36 @@ func main() {
 		return
 	}
 
+	// Command loop
 	reader := bufio.NewReader(os.Stdin)
-	ident := *indentFlag
+	/*sController := spirc.CreateController(session, session.ReusableAuthBlob())
+	sController.SendHello()*/
+
+	// ident := *identFlag
 	printHelp()
+
 	for {
-		fmt.Print("Enter a command: ")
+		fmt.Print("> ")
 		text, _ := reader.ReadString('\n')
 		cmds := strings.Split(strings.TrimSpace(text), " ")
 
 		switch {
-		case cmds[0] == "load":
-			ident = getDevice(sController, ident, reader)
-			if ident != "" {
-				sController.LoadTrack(ident, cmds[1:])
+		case cmds[0] == "track":
+			fmt.Println("Loading track: ", cmds[1])
+
+			track, err := session.Mercury().GetTrack(utils.Base62ToHex(cmds[1]))
+			if err != nil {
+				fmt.Println("Error loading track: ", err)
+				continue
 			}
-		case cmds[0] == "hello":
-			sController.SendHello()
-		case cmds[0] == "play":
-			ident = getDevice(sController, ident, reader)
-			if ident != "" {
-				sController.SendPlay(ident)
-			}
-		case cmds[0] == "pause":
-			ident = getDevice(sController, ident, reader)
-			if ident != "" {
-				sController.SendPause(ident)
-			}
-		case cmds[0] == "devices":
-			ident = chooseDevice(sController, reader)
-		case cmds[0] == "mdns":
-			addMdns(sController, reader)
-		case cmds[0] == "help":
-			printHelp()
-		case cmds[0] == "playlist":
-			playlist, err := sController.GetPlaylist(cmds[1])
-			if err != nil || playlist.Contents == nil {
-				fmt.Println("Playlist not found")
-				break
-			}
-			items := playlist.Contents.Items
-			var ids []string
-			for i := 0; i < len(items); i++ {
-				id := strings.TrimPrefix(items[i].GetUri(), "spotify:track:")
-				ids = append(ids, id)
-			}
-			ident = getDevice(sController, ident, reader)
-			if ident != "" {
-				sController.LoadTrack(ident, ids)
-			}
-		case cmds[0] == "rootlist":
-			playlist, _ := sController.GetRootPlaylist()
+
+			fmt.Println("Track title: ", track.GetName())
+
+		case cmds[0] == "playlists":
+			fmt.Println("Listing playlists")
+
+			playlist, err := session.Mercury().GetRootPlaylist(session.Username())
+
 			if err != nil || playlist.Contents == nil {
 				fmt.Println("Error getting root list")
 				break
@@ -116,10 +107,35 @@ func main() {
 			for i := 0; i < len(items); i++ {
 				id := strings.TrimPrefix(items[i].GetUri(), "spotify:")
 				id = strings.Replace(id, ":", "/", -1)
-				list, _ := sController.GetPlaylist(id)
+				list, _ := session.Mercury().GetPlaylist(id)
 				fmt.Println(list.Attributes.GetName(), id)
+
+				for j := 0; j < len(list.Contents.Items); j++ {
+					item := list.Contents.Items[j]
+					fmt.Println(" ==> ", *item.Uri)
+				}
 			}
+
+		case cmds[0] == "play":
+			fmt.Println("Loading track for play: ", cmds[1])
+
+			track, err := session.Mercury().GetTrack(utils.Base62ToHex(cmds[1]))
+			if err != nil {
+				fmt.Println("Error loading track: ", err)
+				continue
+			}
+
+			fmt.Println("Track:", track.GetName())
+
+			var selectedFileId []byte
+			for _, file := range track.GetFile() {
+				if file.GetFormat() == Spotify.AudioFile_OGG_VORBIS_160 {
+					fmt.Println("Selected OGG 160, id:", file.GetFileId())
+					selectedFileId = file.GetFileId()
+				}
+			}
+
+			session.Player().LoadTrack(track.GetGid(), selectedFileId)
 		}
 	}
-
 }

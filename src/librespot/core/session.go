@@ -4,6 +4,7 @@ import (
 	"Spotify"
 	"bytes"
 	"encoding/base64"
+	"encoding/binary"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"librespot/crypto"
 	"librespot/discovery"
 	"librespot/mercury"
+	"librespot/player"
 	"librespot/utils"
 	"log"
 	"net"
@@ -20,7 +22,7 @@ import (
 type Session struct {
 	/// Constructor references
 	// mercuryConstructor is the constructor that should be used to build a mercury connection
-	mercuryConstructor func(conn connection.PacketStream) mercury.Connection
+	mercuryConstructor func(conn connection.PacketStream) *mercury.Client
 	// shannonConstructor is the constructor used to build the shannon-encrypted PacketStream connection
 	shannonConstructor func(keys crypto.SharedKeys, conn connection.PlainConnection) connection.PacketStream
 
@@ -28,9 +30,11 @@ type Session struct {
 	// stream is the encrypted connection to the Spotify server
 	stream connection.PacketStream
 	// mercury is the mercury client associated with this session
-	mercury mercury.Connection
+	mercury *mercury.Client
 	// discovery is the discovery service used for Spotify Connect devices discovery
 	discovery *discovery.Discovery
+	// player is the player service used to load the audio data
+	player *player.Player
 	// tcpCon is the plain I/O network connection to the server
 	tcpCon io.ReadWriter
 	// keys are the encryption keys used to communicate with the server
@@ -56,8 +60,12 @@ func (s *Session) Discovery() *discovery.Discovery {
 	return s.discovery
 }
 
-func (s *Session) Mercury() mercury.Connection {
+func (s *Session) Mercury() *mercury.Client {
 	return s.mercury
+}
+
+func (s *Session) Player() *player.Player {
+	return s.player
 }
 
 func (s *Session) Username() string {
@@ -94,7 +102,7 @@ func LoginSaved(username string, authData []byte, deviceName string) (*Session, 
 	s.deviceName = deviceName
 
 	s.startConnection()
-	packet := loginPacket(username, authData,
+	packet := makeLoginBlobPacket(username, authData,
 		Spotify.AuthenticationType_AUTHENTICATION_STORED_SPOTIFY_CREDENTIALS.Enum(), s.deviceId)
 	return s, s.doLogin(packet, username)
 }
@@ -140,7 +148,7 @@ func loginOAuthToken(accessToken string, deviceName string) (*Session, error) {
 
 	s.startConnection()
 
-	packet := loginPacket("", []byte(accessToken),
+	packet := makeLoginBlobPacket("", []byte(accessToken),
 		Spotify.AuthenticationType_AUTHENTICATION_SPOTIFY_TOKEN.Enum(), s.deviceId)
 	return s, s.doLogin(packet, "")
 }
@@ -166,11 +174,55 @@ func (s *Session) doLogin(packet []byte, username string) error {
 	s.reusableAuthBlob = welcome.GetReusableAuthCredentials()
 
 	// Poll for acknowledge before loading - needed for gopherjs
-	s.poll()
+	// s.poll()
 	go s.run()
 
 	// return setupController(s, welcome.GetCanonicalUsername(), welcome.GetReusableAuthCredentials()), nil
 	return nil
+}
+
+func (s *Session) getAudioFile(fileId []byte, trackId []byte, start uint32, end uint32) {
+	// AUDIO DATA
+	/*
+		buf := new(bytes.Buffer)
+		//buf.Write(s.mercury.NextSeq())
+		binary.Write(buf, binary.BigEndian, uint16(0x0001)) // TODO: Proper seq/channel id?
+		binary.Write(buf, binary.BigEndian, uint8(0))
+		binary.Write(buf, binary.BigEndian, uint8(1))
+		binary.Write(buf, binary.BigEndian, uint16(0x0000))
+		binary.Write(buf, binary.BigEndian, uint32(0x00000000))
+		binary.Write(buf, binary.BigEndian, uint32(0x00009C40))
+		binary.Write(buf, binary.BigEndian, uint32(0x00020000))
+		buf.Write(fileId)
+		binary.Write(buf, binary.BigEndian, start)
+		binary.Write(buf, binary.BigEndian, end)
+
+		err := s.stream.SendPacket(0x8, buf.Bytes())
+	*/
+
+	// AUDIO KEY
+	fmt.Printf("Loading track audio key, fileId: %s, trackId: %s\n", utils.ConvertTo62(fileId), utils.ConvertTo62(trackId))
+
+	buf := new(bytes.Buffer)
+
+	buf.Write(fileId)
+	buf.Write(trackId)
+	buf.Write(s.mercury.NextSeq())
+	binary.Write(buf, binary.BigEndian, uint16(0x0000))
+
+	err := s.stream.SendPacket(0xc, buf.Bytes())
+
+	if err != nil {
+		log.Println("Error while sending packet", err)
+	}
+
+	/*cmd, data, err := s.stream.RecvPacket()
+	if err != nil {
+		log.Println("error in RecvPacket", err)
+	}
+
+	log.Println("Audio cmd", cmd)
+	log.Println("Audio data", data)*/
 }
 
 func (s *Session) startConnection() error {
@@ -226,6 +278,8 @@ func (s *Session) startConnection() error {
 	s.stream = s.shannonConstructor(sharedKeys, conn)
 	s.mercury = s.mercuryConstructor(s.stream)
 
+	s.player = player.CreatePlayer(s.stream, s.mercury)
+
 	return nil
 }
 
@@ -262,8 +316,9 @@ func (s *Session) run() {
 	for {
 		cmd, data, err := s.stream.RecvPacket()
 		if err != nil {
-			log.Fatal("run error", err)
+			log.Fatal("Error during RecvPacket: ", err)
 		}
+
 		s.handle(cmd, data)
 	}
 }
@@ -305,15 +360,27 @@ func (s *Session) handleLogin() (*Spotify.APWelcome, error) {
 }
 
 func (s *Session) handle(cmd uint8, data []byte) {
+	fmt.Printf("handle, cmd=0x%x data len=%d\n", cmd, len(data))
 	switch {
 	case cmd == 0x4:
+		// Ping
 		err := s.stream.SendPacket(0x49, data)
 		if err != nil {
 			log.Fatal("Handle 0x4", err)
 		}
+
+	case cmd == 0x4a:
+		// Pong reply, ignore
+
+	case cmd == 0xd || cmd == 0xe || cmd == 0x8 || cmd == 0x9:
+		// Audio key and data responses
+		s.player.HandleCmd(cmd, data)
+
 	case cmd == 0x1b:
 		// Handle country code
+
 	case 0xb2 <= cmd && cmd <= 0xb6 || cmd == 0x1b:
+		// Mercury responses
 		err := s.mercury.Handle(cmd, bytes.NewReader(data))
 		if err != nil {
 			log.Fatal("Handle 0xbx", err)
@@ -342,7 +409,7 @@ func (s *Session) getLoginBlobPacket(blob utils.BlobInfo) []byte {
 	buffer.ReadByte()
 	authData := readBytes(buffer)
 
-	return loginPacket(blob.Username, authData, &authType, s.deviceId)
+	return makeLoginBlobPacket(blob.Username, authData, &authType, s.deviceId)
 }
 
 func readInt(b *bytes.Buffer) uint32 {
@@ -365,12 +432,12 @@ func readBytes(b *bytes.Buffer) []byte {
 	return data
 }
 
-func makeLoginPasswordPacket(username, password, deviceId string) []byte {
-	return loginPacket(username, []byte(password),
+func makeLoginPasswordPacket(username string, password string, deviceId string) []byte {
+	return makeLoginBlobPacket(username, []byte(password),
 		Spotify.AuthenticationType_AUTHENTICATION_USER_PASS.Enum(), deviceId)
 }
 
-func loginPacket(username string, authData []byte,
+func makeLoginBlobPacket(username string, authData []byte,
 	authType *Spotify.AuthenticationType, deviceId string) []byte {
 
 	packet := &Spotify.ClientResponseEncrypted{
@@ -414,6 +481,7 @@ func makeHelloMessage(publicKey []byte, nonce []byte) []byte {
 		FeatureSet: &Spotify.FeatureSet{
 			Autoupdate2: proto.Bool(true),
 		},
+		Padding: []byte{0x1e},
 	}
 
 	packetData, err := proto.Marshal(hello)
