@@ -42,6 +42,9 @@ func NewAudioFile(fileId []byte, key []byte, player *Player) *AudioFile {
 
 func (a *AudioFile) Load() error {
 	// Request audio data
+
+	chunkData := make([]byte, kChunkSize*4)
+
 	for i := 0; i < a.TotalChunks(); i++ {
 		fmt.Printf("Requesting chunk %d...\n", i)
 		channel := a.Player.AllocateChannel()
@@ -56,15 +59,15 @@ func (a *AudioFile) Load() error {
 			return err
 		}
 
-		sz := uint32(0)
-		var wholeData []byte
+		chunkSz := 0
 
 		for {
 			chunk := <-a.responseChan
+			chunkLen := len(chunk)
 
-			if len(chunk) > 0 {
-				wholeData = append(wholeData, chunk...)
-				sz += uint32(len(chunk))
+			if chunkLen > 0 {
+				copy(chunkData[chunkSz:chunkSz+chunkLen], chunk)
+				chunkSz += chunkLen
 
 				// fmt.Printf("Read %d/%d of chunk %d\n", sz, expSize, i)
 			} else {
@@ -72,9 +75,9 @@ func (a *AudioFile) Load() error {
 			}
 		}
 
-		fmt.Printf("[audiofile] Got encrypted chunk %d, len=%d...\n", i, len(wholeData))
+		// fmt.Printf("[audiofile] Got encrypted chunk %d, len=%d...\n", i, len(wholeData))
 
-		a.PutEncryptedChunk(i, wholeData)
+		a.PutEncryptedChunk(i, chunkData[0:chunkSz])
 	}
 
 	fmt.Printf("[audiofile] Loaded %d chunks\n", a.TotalChunks())
