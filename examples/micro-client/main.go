@@ -6,9 +6,9 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"librespot"
 	"librespot/core"
-	"librespot/spirc"
 	"librespot/utils"
 	"os"
 	"strings"
@@ -135,7 +135,15 @@ func main() {
 				}
 			}
 
-			session.Player().LoadTrack(track.GetGid(), selectedFileId)
+			audioFile, err := session.Player().LoadTrack(track.GetGid(), selectedFileId)
+
+			if err != nil {
+				fmt.Printf("Error while loading track: %s\n", err)
+			} else {
+				fmt.Println("Writing audio file")
+				fmt.Printf("%x\n", audioFile.Data[0:512])
+				ioutil.WriteFile("/tmp/audio.ogg", audioFile.Data, 0644)
+			}
 		}
 	}
 }

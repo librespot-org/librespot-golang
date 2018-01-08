@@ -3,7 +3,6 @@ package crypto
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"librespot/connection"
 	"log"
@@ -135,8 +134,6 @@ func (s *shannonStream) RecvPacket() (cmd uint8, buf []byte, err error) {
 	if err != nil {
 		return
 	}
-
-	fmt.Printf("[shannon] Size=%d\n", size)
 
 	if size > 0 {
 		buf = make([]byte, size)

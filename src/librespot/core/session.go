@@ -360,7 +360,8 @@ func (s *Session) handleLogin() (*Spotify.APWelcome, error) {
 }
 
 func (s *Session) handle(cmd uint8, data []byte) {
-	fmt.Printf("handle, cmd=0x%x data len=%d\n", cmd, len(data))
+	//fmt.Printf("handle, cmd=0x%x data len=%d\n", cmd, len(data))
+
 	switch {
 	case cmd == 0x4:
 		// Ping
