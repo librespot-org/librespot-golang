@@ -6,7 +6,6 @@ import (
 	"crypto/cipher"
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"math"
 )
 
@@ -121,12 +120,11 @@ func (a *AudioFile) onChannelHeader(channel *Channel, id byte, data *bytes.Reade
 	return read
 }
 
-func (a *AudioFile) onChannelData(channel *Channel, data *bytes.Reader) uint16 {
+func (a *AudioFile) onChannelData(channel *Channel, data []byte) uint16 {
 	if data != nil {
-		dataBytes, _ := ioutil.ReadAll(data)
-		a.responseChan <- dataBytes
+		a.responseChan <- data
 
-		return uint16(len(dataBytes))
+		return 0 // uint16(len(data))
 	} else {
 		// fmt.Printf("[audiofile] Got EOF (nil) audio data on channel %d!\n", channel.num)
 		a.responseChan <- []byte{}

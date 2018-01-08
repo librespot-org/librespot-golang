@@ -49,11 +49,7 @@ func (p *Player) LoadTrack(trackId []byte, fileId []byte) (*AudioFile, error) {
 	log.Printf("[player] Got key %x, fetching audio data\n", key)
 
 	// Allocate an AudioFile and a channel
-	channel := p.AllocateChannel()
 	audioFile := NewAudioFile(fileId, key, p)
-
-	channel.onHeader = headerFunc(audioFile.onChannelHeader)
-	channel.onData = dataFunc(audioFile.onChannelData)
 
 	// Start loading the audio
 	err = audioFile.Load()

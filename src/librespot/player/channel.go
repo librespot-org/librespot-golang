@@ -6,7 +6,7 @@ import (
 )
 
 type headerFunc func(channel *Channel, id byte, data *bytes.Reader) uint16
-type dataFunc func(channel *Channel, data *bytes.Reader) uint16
+type dataFunc func(channel *Channel, data []byte) uint16
 type releaseFunc func(channel *Channel)
 
 type Channel struct {
@@ -76,7 +76,7 @@ func (c *Channel) handlePacket(data []byte) {
 			c.onRelease(c)
 		} else {
 			if c.onData != nil {
-				c.onData(c, bytes.NewReader(data))
+				c.onData(c, data)
 			}
 		}
 	}
