@@ -1,7 +1,7 @@
 ## librespot-golang
 
 librespot-golang is an opensource Golang library based on the [librespot](https://github.com/plietar/librespot) project, allowing you to control Spotify Connect devices, get metadata, and
-play music.
+play music. It has itself been based on [SpotControl](https://github.com/badfortrains/spotcontrol)
 
 This is still highly experimental and in development. Do not use it in production projects yet, as the API is incomplete and subject to heavy changes.
 
