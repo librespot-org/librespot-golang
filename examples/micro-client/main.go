@@ -132,9 +132,11 @@ func funcPlaylists(session *core.Session) {
 		list, _ := session.Mercury().GetPlaylist(id)
 		fmt.Println(list.Attributes.GetName(), id)
 
-		for j := 0; j < len(list.Contents.Items); j++ {
-			item := list.Contents.Items[j]
-			fmt.Println(" ==> ", *item.Uri)
+		if list.Contents != nil {
+			for j := 0; j < len(list.Contents.Items); j++ {
+				item := list.Contents.Items[j]
+				fmt.Println(" ==> ", *item.Uri)
+			}
 		}
 	}
 }
