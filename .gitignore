@@ -18,3 +18,4 @@ examples/node/main.js.map
 vendor/
 .idea/
 pkg/
+blob.bin
