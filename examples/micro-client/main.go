@@ -3,7 +3,6 @@ package main
 import (
 	"Spotify"
 	"bufio"
-	"encoding/base64"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -14,18 +13,13 @@ import (
 	"strings"
 )
 
-const defaultdevicename = "librespot"
+const kDefaultDeviceName = "librespot"
 
 func printHelp() {
 	fmt.Println("\nAvailable commands:")
-	fmt.Println("load <track1> [...more tracks]: load tracks by spotify base 62 id")
-	fmt.Println("hello:                          ask devices to identify themselves")
-	fmt.Println("play:                           play current track")
-	fmt.Println("pause:                          pause playing track")
-	fmt.Println("devices:                        list availbale devices")
-	fmt.Println("mdns:                           show devices found via zeroconf, and login on device")
-	fmt.Println("playlist <playlist id>:         load tracks from given playlist")
-	fmt.Println("rootlist:                       show list of user's playlists")
+	fmt.Println("play <track>:                   play specified track by spotify base64 id")
+	fmt.Println("track <track>:                  show details on specified track by spotify base64 id")
+	fmt.Println("playlists:                      show your playlist")
 	fmt.Println("help:                           show this list\n")
 }
 
@@ -33,8 +27,8 @@ func main() {
 	// Read flags from commandline
 	username := flag.String("username", "", "spotify username")
 	password := flag.String("password", "", "spotify password")
-	blob := flag.String("blob", "", "spotify auth blob")
-	devicename := flag.String("devicename", defaultdevicename, "name of device")
+	blob := flag.String("blob", "blob.bin", "spotify auth blob")
+	devicename := flag.String("devicename", kDefaultDeviceName, "name of device")
 	flag.Parse()
 
 	// Authenticate
@@ -42,39 +36,45 @@ func main() {
 	var err error
 
 	if *username != "" && *password != "" {
+		// Authenticate using a regular login and password, and store it in the blob file.
 		session, err = librespot.Login(*username, *password, *devicename)
 
-		fmt.Println("Login blob: ", base64.StdEncoding.EncodeToString(session.ReusableAuthBlob()))
+		err := ioutil.WriteFile(*blob, session.ReusableAuthBlob(), 0600)
+		if err != nil {
+			fmt.Printf("Could not store authentication blob in blob.bin: %s\n", err)
+		}
 	} else if *blob != "" && *username != "" {
-		blobBytes, err := base64.StdEncoding.DecodeString(*blob)
+		// Authenticate reusing an existing blob
+		blobBytes, err := ioutil.ReadFile(*blob)
 
 		if err != nil {
-			fmt.Println("Invalid blob base64")
+			fmt.Printf("Unable to read auth blob from %s: %s\n", *blob, err)
+			os.Exit(1)
 			return
 		}
 
 		session, err = librespot.LoginSaved(*username, blobBytes, *devicename)
 	} else if os.Getenv("client_secret") != "" {
+		// Authenticate using OAuth (untested)
 		session, err = librespot.LoginOAuth(*devicename, os.Getenv("client_id"), os.Getenv("client_secret"))
 	} else {
+		// No valid options, show the helo
 		fmt.Println("need to supply a username and password or a blob file path")
-		fmt.Println("./microclient --username SPOTIFY_USERNAME --blob ./path/to/blob")
+		fmt.Println("./microclient --username SPOTIFY_USERNAME [--blob ./path/to/blob]")
 		fmt.Println("or")
-		fmt.Println("./microclient --username SPOTIFY_USERNAME --password SPOTIFY_PASSWORD")
+		fmt.Println("./microclient --username SPOTIFY_USERNAME --password SPOTIFY_PASSWORD [--blob ./path/to/blob]")
 		return
 	}
 
 	if err != nil {
 		fmt.Println("Error logging in: ", err)
+		os.Exit(1)
 		return
 	}
 
 	// Command loop
 	reader := bufio.NewReader(os.Stdin)
-	/*sController := spirc.CreateController(session, session.ReusableAuthBlob())
-	sController.SendHello()*/
 
-	// ident := *identFlag
 	printHelp()
 
 	for {
@@ -82,68 +82,93 @@ func main() {
 		text, _ := reader.ReadString('\n')
 		cmds := strings.Split(strings.TrimSpace(text), " ")
 
-		switch {
-		case cmds[0] == "track":
-			fmt.Println("Loading track: ", cmds[1])
-
-			track, err := session.Mercury().GetTrack(utils.Base62ToHex(cmds[1]))
-			if err != nil {
-				fmt.Println("Error loading track: ", err)
-				continue
-			}
-
-			fmt.Println("Track title: ", track.GetName())
-
-		case cmds[0] == "playlists":
-			fmt.Println("Listing playlists")
-
-			playlist, err := session.Mercury().GetRootPlaylist(session.Username())
-
-			if err != nil || playlist.Contents == nil {
-				fmt.Println("Error getting root list")
-				break
-			}
-			items := playlist.Contents.Items
-			for i := 0; i < len(items); i++ {
-				id := strings.TrimPrefix(items[i].GetUri(), "spotify:")
-				id = strings.Replace(id, ":", "/", -1)
-				list, _ := session.Mercury().GetPlaylist(id)
-				fmt.Println(list.Attributes.GetName(), id)
-
-				for j := 0; j < len(list.Contents.Items); j++ {
-					item := list.Contents.Items[j]
-					fmt.Println(" ==> ", *item.Uri)
-				}
-			}
-
-		case cmds[0] == "play":
-			fmt.Println("Loading track for play: ", cmds[1])
-
-			track, err := session.Mercury().GetTrack(utils.Base62ToHex(cmds[1]))
-			if err != nil {
-				fmt.Println("Error loading track: ", err)
-				continue
-			}
-
-			fmt.Println("Track:", track.GetName())
-
-			var selectedFileId []byte
-			for _, file := range track.GetFile() {
-				if file.GetFormat() == Spotify.AudioFile_OGG_VORBIS_160 {
-					fmt.Println("Selected OGG 160, id:", file.GetFileId())
-					selectedFileId = file.GetFileId()
-				}
-			}
-
-			audioFile, err := session.Player().LoadTrack(track.GetGid(), selectedFileId)
-
-			if err != nil {
-				fmt.Printf("Error while loading track: %s\n", err)
+		switch cmds[0] {
+		case "track":
+			if len(cmds) < 2 {
+				fmt.Println("You must specify the Base62 Spotify ID of the track")
 			} else {
-				fmt.Println("Writing audio file")
-				fmt.Printf("%x\n", audioFile.Data[0:512])
-				ioutil.WriteFile("/tmp/audio.ogg", audioFile.Data, 0644)
+				funcTrack(session, cmds[1])
+			}
+
+		case "playlists":
+			funcPlaylists(session)
+
+		case "play":
+			if len(cmds) < 2 {
+				fmt.Println("You must specify the Base62 Spotify ID of the track")
+			} else {
+				funcPlay(session, cmds[1])
 			}
 		}
+	}
+}
+
+func funcTrack(session *core.Session, trackId string) {
+	fmt.Println("Loading track: ", trackId)
+
+	track, err := session.Mercury().GetTrack(utils.Base62ToHex(trackId))
+	if err != nil {
+		fmt.Println("Error loading track: ", err)
+		return
+	}
+
+	fmt.Println("Track title: ", track.GetName())
+}
+
+func funcPlaylists(session *core.Session) {
+	fmt.Println("Listing playlists")
+
+	playlist, err := session.Mercury().GetRootPlaylist(session.Username())
+
+	if err != nil || playlist.Contents == nil {
+		fmt.Println("Error getting root list: ", err)
+		return
+	}
+
+	items := playlist.Contents.Items
+	for i := 0; i < len(items); i++ {
+		id := strings.TrimPrefix(items[i].GetUri(), "spotify:")
+		id = strings.Replace(id, ":", "/", -1)
+		list, _ := session.Mercury().GetPlaylist(id)
+		fmt.Println(list.Attributes.GetName(), id)
+
+		for j := 0; j < len(list.Contents.Items); j++ {
+			item := list.Contents.Items[j]
+			fmt.Println(" ==> ", *item.Uri)
+		}
+	}
+}
+
+func funcPlay(session *core.Session, trackId string) {
+	fmt.Println("Loading track for play: ", trackId)
+
+	// Get the track metadata: it holds information about which files and encodings are available
+	track, err := session.Mercury().GetTrack(utils.Base62ToHex(trackId))
+	if err != nil {
+		fmt.Println("Error loading track: ", err)
+		return
+	}
+
+	fmt.Println("Track:", track.GetName())
+
+	// As a demo, select the OGG 160kbps variant of the track. The "high quality" setting in the official Spotify
+	// app is the OGG 320kbps variant.
+	var selectedFileId []byte
+	for _, file := range track.GetFile() {
+		if file.GetFormat() == Spotify.AudioFile_OGG_VORBIS_160 {
+			fmt.Println("Selected OGG 160, id:", file.GetFileId())
+			selectedFileId = file.GetFileId()
+		}
+	}
+
+	// Synchronously load the track
+	audioFile, err := session.Player().LoadTrack(track.GetGid(), selectedFileId)
+
+	if err != nil {
+		fmt.Printf("Error while loading track: %s\n", err)
+	} else {
+		// We have the track audio, let's play it!
+		fmt.Println("Writing audio file")
+		ioutil.WriteFile("/tmp/audio.ogg", audioFile.Data, 0644)
 	}
 }
