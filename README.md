@@ -1,17 +1,16 @@
-## spotcontrol
+## librespot-golang
 
-Spotcontrol is an open source library for controlling spotify connect devices based on the [librespot](https://github.com/plietar/librespot) project.  
+librespot-golang is an opensource Golang library based on the [librespot](https://github.com/plietar/librespot) project, allowing you to control Spotify Connect devices, get metadata, and
+play music.
 
-Spotcontrol is a golang port of a small subset of the librespot functionality, focusing soley on controlling other devices, it does not offer any support for actual music playback.  A simple cli is included in the examples folder and demonstrates the key features of the library (loading tracks, playing, pausing).
+This is still highly experimental and in development. Do not use it in production projects yet, as the API is incomplete and subject to heavy changes.
 
 ### Installation
+
 This package can be installed using:
 ````
-go get github.com/badfortrains/spotcontrol
+go get github.com/unison-music/librespot-golang
 ````
 
 ### Usage
-To use the package look at the example micro-controller, and see the godoc
-````
-go doc github.com/badfortrains/spotcontrol
-````
+To use the package look at the example micro-controller (for Spotify Connect), or micro-client (for audio playback)
