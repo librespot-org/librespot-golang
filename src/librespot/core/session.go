@@ -340,31 +340,50 @@ func (s *Session) handle(cmd uint8, data []byte) {
 	//fmt.Printf("handle, cmd=0x%x data len=%d\n", cmd, len(data))
 
 	switch {
-	case cmd == 0x4:
+	case cmd == kPacketPing:
 		// Ping
-		err := s.stream.SendPacket(0x49, data)
+		err := s.stream.SendPacket(kPacketPong, data)
 		if err != nil {
-			log.Fatal("Handle 0x4", err)
+			log.Fatal("Error handling kPacketPing", err)
 		}
 
-	case cmd == 0x4a:
+	case cmd == kPacketPongAck:
 		// Pong reply, ignore
 
-	case cmd == 0xd || cmd == 0xe || cmd == 0x8 || cmd == 0x9:
+	case cmd == kPacketAesKey || cmd == kPacketAesKeyError ||
+		cmd == kPacketStreamChunk:
 		// Audio key and data responses
 		s.player.HandleCmd(cmd, data)
 
-	case cmd == 0x1b:
+	case cmd == kPacketCountryCode:
 		// Handle country code
 		s.country = fmt.Sprintf("%s", data)
 
-	case 0xb2 <= cmd && cmd <= 0xb6 || cmd == 0x1b:
+	case 0xb2 <= cmd && cmd <= 0xb6:
 		// Mercury responses
 		err := s.mercury.Handle(cmd, bytes.NewReader(data))
 		if err != nil {
 			log.Fatal("Handle 0xbx", err)
 		}
+
+	case cmd == kPacketSecretBlock:
+		// Old RSA public key
+
+	case cmd == kPacketLegacyWelcome:
+		// Empty welcome packet
+
+	case cmd == kPacketProductInfo:
+		// Has some info about A/B testing status, product setup, etc... in an XML fashion.
+
+	case cmd == 0x1f:
+		// Unknown, data is zeroes only
+
+	case cmd == kPacketLicenseVersion:
+		// This is a simple blob containing the current spotify license. Format of the blob
+		// is [ uint16 id, uint8 len, string license ]
+
 	default:
+		fmt.Printf("Unhandled cmd 0x%x\n", cmd)
 	}
 }
 
