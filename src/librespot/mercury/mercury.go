@@ -157,8 +157,6 @@ func (m *Internal) request(req Request) (seqKey string, err error) {
 }
 
 func encodeMercuryHead(seq []byte, partsLength uint16, flags uint8) (*bytes.Buffer, error) {
-	fmt.Printf("Mercury Head seq: %d\n", seq)
-
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.BigEndian, uint16(len(seq)))
 	if err != nil {

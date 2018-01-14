@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"io/ioutil"
 	"librespot/metadata"
 	"net/url"
 )
@@ -31,6 +32,7 @@ func (m *Client) mercuryGetJson(url string, result interface{}) (err error) {
 
 func (m *Client) mercuryGetProto(url string, result proto.Message) (err error) {
 	data := m.mercuryGet(url)
+	ioutil.WriteFile("/tmp/proto.blob", data, 0644)
 	err = proto.Unmarshal(data, result)
 	return
 }
@@ -68,6 +70,20 @@ func (m *Client) Suggest(search string) (*metadata.SuggestResult, error) {
 func (m *Client) GetTrack(id string) (*Spotify.Track, error) {
 	uri := "hm://metadata/3/track/" + id
 	result := &Spotify.Track{}
+	err := m.mercuryGetProto(uri, result)
+	return result, err
+}
+
+func (m *Client) GetArtist(id string) (*Spotify.Artist, error) {
+	uri := "hm://metadata/3/artist/" + id
+	result := &Spotify.Artist{}
+	err := m.mercuryGetProto(uri, result)
+	return result, err
+}
+
+func (m *Client) GetAlbum(id string) (*Spotify.Album, error) {
+	uri := "hm://metadata/3/album/" + id
+	result := &Spotify.Album{}
 	err := m.mercuryGetProto(uri, result)
 	return result, err
 }

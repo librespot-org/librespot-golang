@@ -95,6 +95,9 @@ func main() {
 		cmds := strings.Split(strings.TrimSpace(text), " ")
 
 		switch cmds[0] {
+		case "help":
+			printHelp()
+
 		case "track":
 			if len(cmds) < 2 {
 				fmt.Println("You must specify the Base62 Spotify ID of the track")
@@ -102,8 +105,25 @@ func main() {
 				funcTrack(session, cmds[1])
 			}
 
+		case "artist":
+			if len(cmds) < 2 {
+				fmt.Println("You must specify the Base62 Spotify ID of the artist")
+			} else {
+				funcArtist(session, cmds[1])
+			}
+
+		case "album":
+			if len(cmds) < 2 {
+				fmt.Println("You must specify the Base62 Spotify ID of the album")
+			} else {
+				funcAlbum(session, cmds[1])
+			}
+
 		case "playlists":
 			funcPlaylists(session)
+
+		case "search":
+			funcSearch(session, cmds[1])
 
 		case "play":
 			if len(cmds) < 2 {
@@ -111,16 +131,22 @@ func main() {
 			} else {
 				funcPlay(session, cmds[1])
 			}
+
+		default:
+			fmt.Println("Unknown command")
 		}
 	}
 }
 
 func printHelp() {
 	fmt.Println("\nAvailable commands:")
-	fmt.Println("play <track>:                   play specified track by spotify base64 id")
-	fmt.Println("track <track>:                  show details on specified track by spotify base64 id")
-	fmt.Println("playlists:                      show your playlist")
-	fmt.Println("help:                           show this list")
+	fmt.Println("play <track>:                   play specified track by spotify base62 id")
+	fmt.Println("track <track>:                  show details on specified track by spotify base62 id")
+	fmt.Println("album <album>:                  show details on specified album by spotify base62 id")
+	fmt.Println("artist <artist>:                show details on specified artist by spotify base62 id")
+	fmt.Println("search <keyword>:               start a search on the specified keyword")
+	fmt.Println("playlists:                      show your playlists")
+	fmt.Println("help:                           show this help")
 }
 
 func funcTrack(session *core.Session, trackId string) {
@@ -133,6 +159,70 @@ func funcTrack(session *core.Session, trackId string) {
 	}
 
 	fmt.Println("Track title: ", track.GetName())
+}
+
+func funcArtist(session *core.Session, artistId string) {
+	artist, err := session.Mercury().GetArtist(utils.Base62ToHex(artistId))
+	if err != nil {
+		fmt.Println("Error loading artist:", err)
+		return
+	}
+
+	fmt.Printf("Artist: %s\n", artist.GetName())
+	fmt.Printf("Popularity: %d\n", artist.GetPopularity())
+	fmt.Printf("Genre: %s\n", artist.GetGenre())
+
+	if artist.GetTopTrack() != nil && len(artist.GetTopTrack()) > 0 {
+		// Spotify returns top tracks in multiple countries. We take the first
+		// one as example, but we should use the country data returned by the
+		// Spotify server (TOOD: implement it)
+		tt := artist.GetTopTrack()[0]
+		fmt.Printf("\nTop tracks (country %s):\n", tt.GetCountry())
+
+		for _, t := range tt.GetTrack() {
+			// To save bandwidth, only track IDs are returned. If you want
+			// the track name, you need to fetch it.
+			fmt.Printf(" => %s\n", utils.ConvertTo62(t.GetGid()))
+		}
+	}
+
+	fmt.Printf("\nAlbums:\n")
+	for _, ag := range artist.GetAlbumGroup() {
+		for _, a := range ag.GetAlbum() {
+			fmt.Printf(" => %s\n", utils.ConvertTo62(a.GetGid()))
+		}
+	}
+
+}
+
+func funcAlbum(session *core.Session, albumId string) {
+	album, err := session.Mercury().GetAlbum(utils.Base62ToHex(albumId))
+	if err != nil {
+		fmt.Println("Error loading album:", err)
+		return
+	}
+
+	fmt.Printf("Album: %s\n", album.GetName())
+	fmt.Printf("Popularity: %d\n", album.GetPopularity())
+	fmt.Printf("Genre: %s\n", album.GetGenre())
+	fmt.Printf("Date: %d-%d-%d\n", album.GetDate().GetYear(), album.GetDate().GetMonth(), album.GetDate().GetDay())
+	fmt.Printf("Label: %s\n", album.GetLabel())
+	fmt.Printf("Type: %s\n", album.GetTyp())
+
+	fmt.Printf("Artists: ")
+	for _, artist := range album.GetArtist() {
+		fmt.Printf("%s ", utils.ConvertTo62(artist.GetGid()))
+	}
+	fmt.Printf("\n")
+
+	for _, disc := range album.GetDisc() {
+		fmt.Printf("\nDisc %d (%s): \n", disc.GetNumber(), disc.GetName())
+
+		for _, track := range disc.GetTrack() {
+			fmt.Printf(" => %s\n", utils.ConvertTo62(track.GetGid()))
+		}
+	}
+
 }
 
 func funcPlaylists(session *core.Session) {
@@ -158,6 +248,40 @@ func funcPlaylists(session *core.Session) {
 				fmt.Println(" ==> ", *item.Uri)
 			}
 		}
+	}
+}
+
+func funcSearch(session *core.Session, keyword string) {
+	res, err := session.Mercury().Search(keyword)
+
+	if err != nil {
+		fmt.Println("Failed to search:", err)
+		return
+	}
+
+	fmt.Println("Search results for ", keyword)
+	fmt.Println("=============================")
+
+	if res.Error != nil {
+		fmt.Println("Search result error:", res.Error)
+	}
+
+	fmt.Printf("Albums: %d (total %d)\n", len(res.Albums.Hits), res.Albums.Total)
+
+	for _, album := range res.Albums.Hits {
+		fmt.Printf(" => %s (%s)\n", album.Name, album.Uri)
+	}
+
+	fmt.Printf("\nArtists: %d (total %d)\n", len(res.Artists.Hits), res.Artists.Total)
+
+	for _, artist := range res.Artists.Hits {
+		fmt.Printf(" => %s (%s)\n", artist.Name, artist.Uri)
+	}
+
+	fmt.Printf("\nTracks: %d (total %d)\n", len(res.Tracks.Hits), res.Tracks.Total)
+
+	for _, track := range res.Tracks.Hits {
+		fmt.Printf(" => %s (%s)\n", track.Name, track.Uri)
 	}
 }
 

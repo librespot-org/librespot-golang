@@ -177,32 +177,11 @@ func (s *Session) doLogin(packet []byte, username string) error {
 	// s.poll()
 	go s.run()
 
-	// return setupController(s, welcome.GetCanonicalUsername(), welcome.GetReusableAuthCredentials()), nil
 	return nil
 }
 
 func (s *Session) getAudioFile(fileId []byte, trackId []byte, start uint32, end uint32) {
-	// AUDIO DATA
-	/*
-		buf := new(bytes.Buffer)
-		//buf.Write(s.mercury.NextSeq())
-		binary.Write(buf, binary.BigEndian, uint16(0x0001)) // TODO: Proper seq/channel id?
-		binary.Write(buf, binary.BigEndian, uint8(0))
-		binary.Write(buf, binary.BigEndian, uint8(1))
-		binary.Write(buf, binary.BigEndian, uint16(0x0000))
-		binary.Write(buf, binary.BigEndian, uint32(0x00000000))
-		binary.Write(buf, binary.BigEndian, uint32(0x00009C40))
-		binary.Write(buf, binary.BigEndian, uint32(0x00020000))
-		buf.Write(fileId)
-		binary.Write(buf, binary.BigEndian, start)
-		binary.Write(buf, binary.BigEndian, end)
-
-		err := s.stream.SendPacket(0x8, buf.Bytes())
-	*/
-
-	// AUDIO KEY
-	fmt.Printf("Loading track audio key, fileId: %s, trackId: %s\n", utils.ConvertTo62(fileId), utils.ConvertTo62(trackId))
-
+	// Request the audio key (cipher)
 	buf := new(bytes.Buffer)
 
 	buf.Write(fileId)
@@ -215,14 +194,6 @@ func (s *Session) getAudioFile(fileId []byte, trackId []byte, start uint32, end 
 	if err != nil {
 		log.Println("Error while sending packet", err)
 	}
-
-	/*cmd, data, err := s.stream.RecvPacket()
-	if err != nil {
-		log.Println("error in RecvPacket", err)
-	}
-
-	log.Println("Audio cmd", cmd)
-	log.Println("Audio data", data)*/
 }
 
 func (s *Session) startConnection() error {
