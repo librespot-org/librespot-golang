@@ -206,14 +206,13 @@ func funcPlay(session *core.Session, trackId string) {
 		}()
 
 		fmt.Println("Setting up PortAudio stream...")
-		fmt.Printf("PortAudio channels: %d / SampleRate: %f / Samples out: %d\n", info.Channels, info.SampleRate, dec.SamplesOut())
-		channels := int32(2)
+		fmt.Printf("PortAudio channels: %d / SampleRate: %f\n", info.Channels, info.SampleRate)
 
 		var wg sync.WaitGroup
 		var stream *portaudio.Stream
-		callback := paCallback(&wg, int(channels), dec.SamplesOut())
+		callback := paCallback(&wg, int(info.Channels), dec.SamplesOut())
 
-		if err := portaudio.OpenDefaultStream(&stream, 0, channels, kSampleFormat, 44100,
+		if err := portaudio.OpenDefaultStream(&stream, 0, info.Channels, kSampleFormat, info.SampleRate,
 			kSamplesPerChannel, callback, nil); paError(err) {
 			log.Fatalln(paErrorText(err))
 		}
