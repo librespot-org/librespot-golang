@@ -45,7 +45,7 @@ func (a *AudioFile) Load() error {
 	chunkData := make([]byte, kChunkSize*4)
 
 	for i := 0; i < a.TotalChunks(); i++ {
-		fmt.Printf("Requesting chunk %d...\n", i)
+		fmt.Printf("[audiofile] Requesting chunk %d...\n", i)
 		channel := a.Player.AllocateChannel()
 		channel.onHeader = a.onChannelHeader
 		channel.onData = a.onChannelData
@@ -77,6 +77,11 @@ func (a *AudioFile) Load() error {
 		// fmt.Printf("[audiofile] Got encrypted chunk %d, len=%d...\n", i, len(wholeData))
 
 		a.PutEncryptedChunk(i, chunkData[0:chunkSz])
+	}
+
+	// OGG header fixup
+	if a.Data[5] == 0x06 {
+		a.Data[5] = 0x02
 	}
 
 	fmt.Printf("[audiofile] Loaded %d chunks\n", a.TotalChunks())
