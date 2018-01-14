@@ -175,7 +175,7 @@ func funcArtist(session *core.Session, artistId string) {
 	if artist.GetTopTrack() != nil && len(artist.GetTopTrack()) > 0 {
 		// Spotify returns top tracks in multiple countries. We take the first
 		// one as example, but we should use the country data returned by the
-		// Spotify server (TOOD: implement it)
+		// Spotify server (session.Country())
 		tt := artist.GetTopTrack()[0]
 		fmt.Printf("\nTop tracks (country %s):\n", tt.GetCountry())
 

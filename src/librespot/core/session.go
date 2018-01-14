@@ -50,6 +50,8 @@ type Session struct {
 	username string
 	// reusableAuthBlob is the reusable authentication blob for Spotify Connect devices
 	reusableAuthBlob []byte
+	// country is the user country returned by the Spotify servers
+	country string
 }
 
 func (s *Session) Stream() connection.PacketStream {
@@ -78,6 +80,10 @@ func (s *Session) DeviceId() string {
 
 func (s *Session) ReusableAuthBlob() []byte {
 	return s.reusableAuthBlob
+}
+
+func (s *Session) Country() string {
+	return s.country
 }
 
 // Login to Spotify using username and password
@@ -350,6 +356,7 @@ func (s *Session) handle(cmd uint8, data []byte) {
 
 	case cmd == 0x1b:
 		// Handle country code
+		s.country = fmt.Sprintf("%s", data)
 
 	case 0xb2 <= cmd && cmd <= 0xb6 || cmd == 0x1b:
 		// Mercury responses
