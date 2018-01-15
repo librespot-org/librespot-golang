@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"io/ioutil"
 	"librespot/metadata"
 	"net/url"
 )

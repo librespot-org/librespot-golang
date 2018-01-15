@@ -6,6 +6,7 @@ import (
 	"crypto/cipher"
 	"encoding/binary"
 	"fmt"
+	"librespot/connection"
 	"math"
 )
 
@@ -52,7 +53,7 @@ func (a *AudioFile) Load() error {
 
 		chunkOffsetStart := uint32(i * kChunkSize)
 		chunkOffsetEnd := uint32((i + 1) * kChunkSize)
-		err := a.Player.stream.SendPacket(0x8, buildAudioChunkRequest(channel.num, a.FileId, chunkOffsetStart, chunkOffsetEnd))
+		err := a.Player.stream.SendPacket(connection.PacketStreamChunk, buildAudioChunkRequest(channel.num, a.FileId, chunkOffsetStart, chunkOffsetEnd))
 
 		if err != nil {
 			return err

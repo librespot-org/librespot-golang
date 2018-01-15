@@ -160,7 +160,7 @@ func loginOAuthToken(accessToken string, deviceName string) (*Session, error) {
 }
 
 func (s *Session) doLogin(packet []byte, username string) error {
-	err := s.stream.SendPacket(0xab, packet)
+	err := s.stream.SendPacket(connection.PacketLogin, packet)
 	if err != nil {
 		log.Fatal("bad shannon write", err)
 	}
@@ -184,22 +184,6 @@ func (s *Session) doLogin(packet []byte, username string) error {
 	go s.run()
 
 	return nil
-}
-
-func (s *Session) getAudioFile(fileId []byte, trackId []byte, start uint32, end uint32) {
-	// Request the audio key (cipher)
-	buf := new(bytes.Buffer)
-
-	buf.Write(fileId)
-	buf.Write(trackId)
-	buf.Write(s.mercury.NextSeq())
-	binary.Write(buf, binary.BigEndian, uint16(0x0000))
-
-	err := s.stream.SendPacket(0xc, buf.Bytes())
-
-	if err != nil {
-		log.Println("Error while sending packet", err)
-	}
 }
 
 func (s *Session) startConnection() error {
@@ -300,29 +284,15 @@ func (s *Session) run() {
 	}
 }
 
-/*
-func (s *Session) mercurySubscribe(uri string, responseCh chan mercury.Response, responseCb mercury.Callback) error {
-	return s.mercury.Subscribe(uri, responseCh, responseCb)
-}
-
-func (s *Session) mercurySendRequest(request mercury.Request, responseCb mercury.Callback) {
-	err := s.mercury.Request(request, responseCb)
-	if err != nil && responseCb != nil {
-		responseCb(mercury.Response{
-			StatusCode: 500,
-		})
-	}
-}
-*/
 func (s *Session) handleLogin() (*Spotify.APWelcome, error) {
 	cmd, data, err := s.stream.RecvPacket()
 	if err != nil {
 		return nil, fmt.Errorf("authentication failed: %v", err)
 	}
 
-	if cmd == 0xad {
+	if cmd == connection.PacketAuthFailure {
 		return nil, fmt.Errorf("authentication failed")
-	} else if cmd == 0xac {
+	} else if cmd == connection.PacketAPWelcome {
 		welcome := &Spotify.APWelcome{}
 		err := proto.Unmarshal(data, welcome)
 		if err != nil {
@@ -340,22 +310,22 @@ func (s *Session) handle(cmd uint8, data []byte) {
 	//fmt.Printf("handle, cmd=0x%x data len=%d\n", cmd, len(data))
 
 	switch {
-	case cmd == kPacketPing:
+	case cmd == connection.PacketPing:
 		// Ping
-		err := s.stream.SendPacket(kPacketPong, data)
+		err := s.stream.SendPacket(connection.PacketPong, data)
 		if err != nil {
-			log.Fatal("Error handling kPacketPing", err)
+			log.Fatal("Error handling PacketPing", err)
 		}
 
-	case cmd == kPacketPongAck:
+	case cmd == connection.PacketPongAck:
 		// Pong reply, ignore
 
-	case cmd == kPacketAesKey || cmd == kPacketAesKeyError ||
-		cmd == kPacketStreamChunk:
+	case cmd == connection.PacketAesKey || cmd == connection.PacketAesKeyError ||
+		cmd == connection.PacketStreamChunk:
 		// Audio key and data responses
 		s.player.HandleCmd(cmd, data)
 
-	case cmd == kPacketCountryCode:
+	case cmd == connection.PacketCountryCode:
 		// Handle country code
 		s.country = fmt.Sprintf("%s", data)
 
@@ -366,21 +336,21 @@ func (s *Session) handle(cmd uint8, data []byte) {
 			log.Fatal("Handle 0xbx", err)
 		}
 
-	case cmd == kPacketSecretBlock:
+	case cmd == connection.PacketSecretBlock:
 		// Old RSA public key
 
-	case cmd == kPacketLegacyWelcome:
+	case cmd == connection.PacketLegacyWelcome:
 		// Empty welcome packet
 
-	case cmd == kPacketProductInfo:
+	case cmd == connection.PacketProductInfo:
 		// Has some info about A/B testing status, product setup, etc... in an XML fashion.
 
 	case cmd == 0x1f:
 		// Unknown, data is zeroes only
 
-	case cmd == kPacketLicenseVersion:
-		// This is a simple blob containing the current spotify license. Format of the blob
-		// is [ uint16 id, uint8 len, string license ]
+	case cmd == connection.PacketLicenseVersion:
+		// This is a simple blob containing the current Spotify license version (e.g. 1.0.1-FR). Format of the blob
+		// is [ uint16 id (= 0x001), uint8 len, string license ]
 
 	default:
 		fmt.Printf("Unhandled cmd 0x%x\n", cmd)

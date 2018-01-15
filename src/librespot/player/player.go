@@ -38,7 +38,7 @@ func (p *Player) LoadTrack(trackId []byte, fileId []byte) (*AudioFile, error) {
 	fmt.Printf("[player] Loading track audio key, fileId: %s, trackId: %s\n", utils.ConvertTo62(fileId), utils.ConvertTo62(trackId))
 	fmt.Printf("[player] Track as hex: %x\nFile as hex: %x\n", trackId, fileId)
 
-	err := p.stream.SendPacket(0xc, p.buildKeyRequest(trackId, fileId))
+	err := p.stream.SendPacket(connection.PacketRequestKey, p.buildKeyRequest(trackId, fileId))
 
 	if err != nil {
 		log.Println("Error while sending packet", err)
@@ -70,16 +70,16 @@ func (p *Player) AllocateChannel() *Channel {
 
 func (p *Player) HandleCmd(cmd byte, data []byte) {
 	switch {
-	case cmd == 0xd:
+	case cmd == connection.PacketAesKey:
 		// Audio key response
 		p.keyChan <- data[4:20]
 
-	case cmd == 0xe:
+	case cmd == connection.PacketAesKeyError:
 		// Audio key error
 		fmt.Println("[player] Audio key error!")
 		fmt.Printf("%x\n", data)
 
-	case cmd == 0x9:
+	case cmd == connection.PacketStreamChunkRes:
 		// Audio data response
 		var channel uint16
 		dataReader := bytes.NewReader(data)
