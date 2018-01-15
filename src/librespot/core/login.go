@@ -12,6 +12,9 @@ import (
 	"log"
 )
 
+var Version = "master"
+var BuildID = "dev"
+
 // Login to Spotify using username and password
 func Login(username string, password string, deviceName string) (*Session, error) {
 	s := setupSession()
@@ -156,6 +159,7 @@ func makeLoginPasswordPacket(username string, password string, deviceId string) 
 
 func makeLoginBlobPacket(username string, authData []byte,
 	authType *Spotify.AuthenticationType, deviceId string) []byte {
+	versionString := "librespot-golang_" + Version + "_" + BuildID
 
 	packet := &Spotify.ClientResponseEncrypted{
 		LoginCredentials: &Spotify.LoginCredentials{
@@ -166,10 +170,10 @@ func makeLoginBlobPacket(username string, authData []byte,
 		SystemInfo: &Spotify.SystemInfo{
 			CpuFamily: Spotify.CpuFamily_CPU_UNKNOWN.Enum(),
 			Os:        Spotify.Os_OS_UNKNOWN.Enum(),
-			SystemInformationString: proto.String("librespot"),
+			SystemInformationString: proto.String("librespot-golang"),
 			DeviceId:                proto.String(deviceId),
 		},
-		VersionString: proto.String("librespot-8315e10"),
+		VersionString: proto.String(versionString),
 	}
 
 	packetData, err := proto.Marshal(packet)
