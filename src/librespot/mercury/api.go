@@ -25,6 +25,7 @@ func (m *Client) mercuryGet(url string) []byte {
 
 func (m *Client) mercuryGetJson(url string, result interface{}) (err error) {
 	data := m.mercuryGet(url)
+	// fmt.Printf("%s", data)
 	err = json.Unmarshal(data, result)
 	return
 }
@@ -37,24 +38,34 @@ func (m *Client) mercuryGetProto(url string, result proto.Message) (err error) {
 }
 
 func (m *Client) GetRootPlaylist(username string) (*Spotify.SelectedListContent, error) {
-	uri := "hm://playlist/user/" + username + "/rootlist"
+	uri := fmt.Sprintf("hm://playlist/user/%s/rootlist", username)
+
 	result := &Spotify.SelectedListContent{}
 	err := m.mercuryGetProto(uri, result)
 	return result, err
 }
 
 func (m *Client) GetPlaylist(id string) (*Spotify.SelectedListContent, error) {
-	uri := "hm://playlist/" + id
+	uri := fmt.Sprintf("hm://playlist/%s", id)
 
 	result := &Spotify.SelectedListContent{}
 	err := m.mercuryGetProto(uri, result)
 	return result, err
 }
 
-func (m *Client) Search(search string) (*metadata.SearchResult, error) {
-	uri := "hm://searchview/km/v2/search/" + url.QueryEscape(search) + "?limit=12&tracks-limit=100&catalogue=&country=US&locale=en&platform=zelda&username="
+func (m *Client) Search(search string, limit int, country string, username string) (*metadata.SearchResponse, error) {
+	v := url.Values{}
+	v.Set("entityVersion", "2")
+	v.Set("limit", fmt.Sprintf("%d", limit))
+	v.Set("imageSize", "large")
+	v.Set("catalogue", "")
+	v.Set("country", country)
+	v.Set("platform", "zelda")
+	v.Set("username", username)
 
-	result := &metadata.SearchResult{}
+	uri := fmt.Sprintf("hm://searchview/km/v4/search/%s?%s", url.QueryEscape(search), v.Encode())
+
+	result := &metadata.SearchResponse{}
 	err := m.mercuryGetJson(uri, result)
 	return result, err
 }

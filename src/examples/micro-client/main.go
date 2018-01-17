@@ -3,7 +3,6 @@ package main
 import (
 	"Spotify"
 	"bufio"
-	"bytes"
 	"flag"
 	"fmt"
 	"github.com/xlab/portaudio-go/portaudio"
@@ -252,12 +251,14 @@ func funcPlaylists(session *core.Session) {
 }
 
 func funcSearch(session *core.Session, keyword string) {
-	res, err := session.Mercury().Search(keyword)
+	resp, err := session.Mercury().Search(keyword, 12, session.Country(), session.Username())
 
 	if err != nil {
 		fmt.Println("Failed to search:", err)
 		return
 	}
+
+	res := resp.Results
 
 	fmt.Println("Search results for ", keyword)
 	fmt.Println("=============================")
@@ -299,16 +300,17 @@ func funcPlay(session *core.Session, trackId string) {
 
 	// As a demo, select the OGG 160kbps variant of the track. The "high quality" setting in the official Spotify
 	// app is the OGG 320kbps variant.
-	var selectedFileId []byte
+	var selectedFile *Spotify.AudioFile
 	for _, file := range track.GetFile() {
 		if file.GetFormat() == Spotify.AudioFile_OGG_VORBIS_160 {
-			fmt.Println("Selected OGG 160, id:", file.GetFileId())
-			selectedFileId = file.GetFileId()
+			selectedFile = file
 		}
 	}
 
 	// Synchronously load the track
-	audioFile, err := session.Player().LoadTrack(track.GetGid(), selectedFileId)
+	audioFile, err := session.Player().LoadTrack(selectedFile, track.GetGid())
+
+	// TODO: channel to be notified of chunks downloaded (or reader?)
 
 	if err != nil {
 		fmt.Printf("Error while loading track: %s\n", err)
@@ -317,7 +319,7 @@ func funcPlay(session *core.Session, trackId string) {
 		// Note that we skip the first 167 bytes as it is a Spotify-specific header. You can decode it by
 		// using this: https://sourceforge.net/p/despotify/code/HEAD/tree/java/trunk/src/main/java/se/despotify/client/player/SpotifyOggHeader.java
 		fmt.Println("Setting up OGG decoder...")
-		dec, err := decoder.New(bytes.NewReader(audioFile.Data[167:]), kSamplesPerChannel)
+		dec, err := decoder.New(audioFile, kSamplesPerChannel)
 		if err != nil {
 			log.Fatalln(err)
 		}

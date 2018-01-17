@@ -118,21 +118,28 @@ func (m *Client) Request(req Request, cb Callback) (err error) {
 }
 
 func (m *Client) NextSeq() []byte {
-	return m.internal.NextSeq()
-}
-
-func (m *Internal) NextSeq() []byte {
-	m.seqLock.Lock()
-	seq := make([]byte, 4)
-	binary.BigEndian.PutUint32(seq, m.nextSeq)
-	m.nextSeq += 1
-	m.seqLock.Unlock()
-
+	_, seq := m.internal.NextSeq()
 	return seq
 }
 
+func (m *Client) NextSeqWithInt() (uint32, []byte) {
+	return m.internal.NextSeq()
+}
+
+func (m *Internal) NextSeq() (uint32, []byte) {
+	m.seqLock.Lock()
+
+	seq := make([]byte, 4)
+	seqInt := m.nextSeq
+	binary.BigEndian.PutUint32(seq, seqInt)
+	m.nextSeq += 1
+	m.seqLock.Unlock()
+
+	return seqInt, seq
+}
+
 func (m *Internal) request(req Request) (seqKey string, err error) {
-	seq := m.NextSeq()
+	_, seq := m.NextSeq()
 	data, err := encodeRequest(seq, req)
 	if err != nil {
 		return "", err
