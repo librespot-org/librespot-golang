@@ -151,3 +151,10 @@ type SuggestResult struct {
 	TopHits []TopHit
 	Error   error
 }
+
+type Token struct {
+	AccessToken string   `json:"accessToken"`
+	ExpiresIn   int      `json:"expiresIn"`
+	TokenType   string   `json:"tokenType"`
+	Scope       []string `json:"scope"`
+}

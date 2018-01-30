@@ -53,6 +53,15 @@ func (m *Client) GetPlaylist(id string) (*Spotify.SelectedListContent, error) {
 	return result, err
 }
 
+func (m *Client) GetToken(clientId string, scopes string) (*metadata.Token, error) {
+	uri := fmt.Sprintf("hm://keymaster/token/authenticated?client_id=%s&scope=%s", url.QueryEscape(clientId),
+		url.QueryEscape(scopes))
+
+	token := &metadata.Token{}
+	err := m.mercuryGetJson(uri, token)
+	return token, err
+}
+
 func (m *Client) Search(search string, limit int, country string, username string) (*metadata.SearchResponse, error) {
 	v := url.Values{}
 	v.Set("entityVersion", "2")
