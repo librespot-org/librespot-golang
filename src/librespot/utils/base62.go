@@ -18,7 +18,12 @@ func Convert62(id string) []byte {
 		n = n.Add(n, d)
 	}
 
-	return n.Bytes()
+	nBytes := n.Bytes()
+	if len(nBytes) < 16 {
+		paddingBytes := make([]byte, 16-len(nBytes))
+		nBytes = append(paddingBytes, nBytes...)
+	}
+	return nBytes
 }
 
 func reverse(s string) string {
