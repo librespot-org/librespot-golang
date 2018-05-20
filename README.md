@@ -13,10 +13,29 @@ and subject to heavy changes.
 ### Installation
 
 This package can be installed using:
+
 ````
-go get github.com/librespot-org/librespot-golang
+git clone github.com/librespot-org/librespot-golang
 ````
+
+or by using it as a dependency in your godep vendor file.
 
 ### Usage
 
 To use the package look at the example micro-controller (for Spotify Connect), or micro-client (for audio playback).
+
+### Building for mobile
+
+The package `librespotmobile` contains bindings suitable for use with Gomobile, which lets you use a subset of the
+librespot library on Android and iOS.
+
+To get started, install gomobile, and simply run (for Android):
+
+````
+cd /path/to/librespot-golang
+export GOPATH=$(pwd)
+gomobile init -ndk /path/to/android-ndk
+gomobile bind librespotmobile
+````
+
+This will build you a file called `librespotmobile.aar` which you can include in your Android Studio project.

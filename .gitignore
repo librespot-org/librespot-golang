@@ -3,3 +3,6 @@ vendor/
 .idea/
 pkg/
 blob.bin
+*.aar
+*.jar
+bin/
