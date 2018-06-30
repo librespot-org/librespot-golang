@@ -39,3 +39,9 @@ gomobile bind librespotmobile
 ````
 
 This will build you a file called `librespotmobile.aar` which you can include in your Android Studio project.
+
+### To-Do's
+
+* Handling disconnections, timeouts, etc (overall failure tolerance)
+* Playlist management
+* Spotify Radio support
