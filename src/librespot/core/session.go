@@ -98,7 +98,7 @@ func (s *Session) startConnection() error {
 	// Wait and read the hello reply
 	initServerPacket, err := conn.RecvPacket()
 	if err != nil {
-		log.Fatal("Error receving packet for hello", err)
+		log.Fatal("Error receving packet for hello: ", err)
 		return err
 	}
 
@@ -143,21 +143,14 @@ func (s *Session) startConnection() error {
 }
 
 func setupSession() *Session {
-	apUrl, err := utils.APResolve()
-	if err != nil {
-		log.Fatal("Failed to get ap url", err)
-	}
-
-	tcpCon, err := net.Dial("tcp", apUrl)
-	if err != nil {
-		log.Fatal("Failed to connect:", err)
-	}
-	return &Session{
+	session := &Session{
 		keys:               crypto.GenerateKeys(),
-		tcpCon:             tcpCon,
 		mercuryConstructor: mercury.CreateMercury,
 		shannonConstructor: crypto.CreateStream,
 	}
+	session.doConnect()
+
+	return session
 }
 
 func sessionFromDiscovery(d *discovery.Discovery) (*Session, error) {
@@ -171,11 +164,39 @@ func sessionFromDiscovery(d *discovery.Discovery) (*Session, error) {
 	return s, s.doLogin(loginPacket, d.LoginBlob().Username)
 }
 
+func (s *Session) doConnect() error {
+	apUrl, err := utils.APResolve()
+	if err != nil {
+		log.Println("Failed to get ap url", err)
+		return err
+	}
+
+	s.tcpCon, err = net.Dial("tcp", apUrl)
+	if err != nil {
+		log.Println("Failed to connect:", err)
+		return err
+	}
+
+	return err
+}
+
+func (s *Session) doReconnect() error {
+	s.startConnection()
+	packet := makeLoginBlobPacket(s.username, s.reusableAuthBlob,
+		Spotify.AuthenticationType_AUTHENTICATION_STORED_SPOTIFY_CREDENTIALS.Enum(), s.deviceId)
+	return s.doLogin(packet, s.username)
+}
+
 func (s *Session) runPollLoop() {
 	for {
 		cmd, data, err := s.stream.RecvPacket()
 		if err != nil {
-			log.Fatal("Error during RecvPacket: ", err)
+			log.Println("Error during RecvPacket: ", err)
+
+			if err == io.EOF {
+				// We've been disconnected, reconnect
+				s.doReconnect()
+			}
 		}
 
 		s.handle(cmd, data)

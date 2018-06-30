@@ -6,6 +6,7 @@ import (
 	"io"
 	"librespot/connection"
 	"log"
+	"sync"
 )
 
 type shannonStream struct {
@@ -16,6 +17,8 @@ type shannonStream struct {
 	recvNonce uint32
 	reader    io.Reader
 	writer    io.Writer
+
+	mutex *sync.Mutex
 }
 
 func setKey(ctx *shn_ctx, key []uint8) {
@@ -31,6 +34,7 @@ func CreateStream(keys SharedKeys, conn connection.PlainConnection) connection.P
 	s := &shannonStream{
 		reader: conn.Reader,
 		writer: conn.Writer,
+		mutex:  &sync.Mutex{},
 	}
 
 	setKey(&s.recvCipher, keys.recvKey)
@@ -40,6 +44,9 @@ func CreateStream(keys SharedKeys, conn connection.PlainConnection) connection.P
 }
 
 func (s *shannonStream) SendPacket(cmd uint8, data []byte) (err error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	_, err = s.Write(cipherPacket(cmd, data))
 	if err != nil {
 		return

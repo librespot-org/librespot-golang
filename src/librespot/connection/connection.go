@@ -3,12 +3,14 @@ package connection
 import (
 	"encoding/binary"
 	"io"
+	"sync"
 )
 
 // PlainConnection represents an unencrypted connection to a Spotify AP
 type PlainConnection struct {
 	Writer io.Writer
 	Reader io.Reader
+	mutex  *sync.Mutex
 }
 
 func makePacketPrefix(prefix []byte, data []byte) []byte {
@@ -25,12 +27,15 @@ func MakePlainConnection(reader io.Reader, writer io.Writer) PlainConnection {
 	return PlainConnection{
 		Reader: reader,
 		Writer: writer,
+		mutex:  &sync.Mutex{},
 	}
 }
 
 func (p *PlainConnection) SendPrefixPacket(prefix []byte, data []byte) (packet []byte, err error) {
+	p.mutex.Lock()
 	packet = makePacketPrefix(prefix, data)
 	_, err = p.Writer.Write(packet)
+	p.mutex.Unlock()
 	return
 }
 
