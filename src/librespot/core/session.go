@@ -183,7 +183,7 @@ func (s *Session) runPollLoop() {
 }
 
 func (s *Session) handle(cmd uint8, data []byte) {
-	//fmt.Printf("handle, cmd=0x%x data len=%d\n", cmd, len(data))
+	//fmt.Printf("handle, cmd=0x%x data=%x\n", cmd, data)
 
 	switch {
 	case cmd == connection.PacketPing:

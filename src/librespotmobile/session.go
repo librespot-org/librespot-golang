@@ -34,7 +34,7 @@ func LoginSaved(username string, authData []byte, deviceName string) (*MobileSes
 func initSessionImpl(sess *core.Session) (*MobileSession, error) {
 	return &MobileSession{
 		session: sess,
-		player: createMobilePlayer(sess),
+		player:  createMobilePlayer(sess),
 		mercury: createMobileMercury(sess),
 	}, nil
 }
@@ -57,4 +57,8 @@ func (s *MobileSession) Country() string {
 
 func (s *MobileSession) Player() *MobilePlayer {
 	return s.player
+}
+
+func (s *MobileSession) Mercury() *MobileMercury {
+	return s.mercury
 }
