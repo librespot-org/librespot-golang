@@ -5,10 +5,13 @@ const (
 	PacketPing           = 0x04
 	PacketStreamChunk    = 0x08
 	PacketStreamChunkRes = 0x09
+	PacketChannelError   = 0x0a
+	PacketChannelAbort   = 0x0b
 	PacketRequestKey     = 0x0c
 	PacketAesKey         = 0x0d
 	PacketAesKeyError    = 0x0e
 
+	PacketImage       = 0x19
 	PacketCountryCode = 0x1b
 
 	PacketPong    = 0x49

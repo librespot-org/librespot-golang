@@ -43,10 +43,14 @@ type AudioFile struct {
 }
 
 func newAudioFile(file *Spotify.AudioFile, player *Player) *AudioFile {
+	return newAudioFileWithIdAndFormat(file.GetFileId(), file.GetFormat(), player)
+}
+
+func newAudioFileWithIdAndFormat(fileId []byte, format Spotify.AudioFile_Format, player *Player) *AudioFile {
 	return &AudioFile{
 		player:        player,
-		fileId:        file.GetFileId(),
-		format:        file.GetFormat(),
+		fileId:        fileId,
+		format:        format,
 		decrypter:     NewAudioFileDecrypter(),
 		size:          kChunkSize, // Set an initial size to fetch the first chunk regardless of the actual size
 		responseChan:  make(chan []byte),
@@ -215,7 +219,6 @@ func (a *AudioFile) requestChunk(chunkIndex int) {
 }
 
 func (a *AudioFile) loadChunk(chunkIndex int) error {
-	fmt.Printf("[audiofile] Requesting chunk %d...\n", chunkIndex)
 	chunkData := make([]byte, kChunkByteSize)
 
 	channel := a.player.AllocateChannel()

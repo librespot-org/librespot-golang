@@ -35,10 +35,14 @@ func CreatePlayer(conn connection.PacketStream, client *mercury.Client) *Player 
 }
 
 func (p *Player) LoadTrack(file *Spotify.AudioFile, trackId []byte) (*AudioFile, error) {
+	return p.LoadTrackWithIdAndFormat(file.FileId, file.GetFormat(), trackId)
+}
+
+func (p *Player) LoadTrackWithIdAndFormat(fileId []byte, format Spotify.AudioFile_Format, trackId []byte) (*AudioFile, error) {
 	// fmt.Printf("[player] Loading track audio key, fileId: %s, trackId: %s\n", utils.ConvertTo62(fileId), utils.ConvertTo62(trackId))
 
 	// Allocate an AudioFile and a channel
-	audioFile := newAudioFile(file, p)
+	audioFile := newAudioFileWithIdAndFormat(fileId, format, p)
 
 	// Start loading the audio key
 	err := audioFile.loadKey(trackId)
