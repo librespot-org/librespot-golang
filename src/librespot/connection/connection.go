@@ -32,10 +32,12 @@ func MakePlainConnection(reader io.Reader, writer io.Writer) PlainConnection {
 }
 
 func (p *PlainConnection) SendPrefixPacket(prefix []byte, data []byte) (packet []byte, err error) {
-	p.mutex.Lock()
 	packet = makePacketPrefix(prefix, data)
+
+	p.mutex.Lock()
 	_, err = p.Writer.Write(packet)
 	p.mutex.Unlock()
+
 	return
 }
 
