@@ -14,6 +14,7 @@ import (
 	"librespot/utils"
 	"log"
 	"net"
+	"time"
 )
 
 // Session represents an active Spotify connection
@@ -142,24 +143,32 @@ func (s *Session) startConnection() error {
 	return nil
 }
 
-func setupSession() *Session {
+func setupSession() (*Session, error) {
 	session := &Session{
 		keys:               crypto.GenerateKeys(),
 		mercuryConstructor: mercury.CreateMercury,
 		shannonConstructor: crypto.CreateStream,
 	}
-	session.doConnect()
+	err := session.doConnect()
 
-	return session
+	return session, err
 }
 
 func sessionFromDiscovery(d *discovery.Discovery) (*Session, error) {
-	s := setupSession()
+	s, err := setupSession()
+	if err != nil {
+		return nil, err
+	}
+
 	s.discovery = d
 	s.deviceId = d.DeviceId()
 	s.deviceName = d.DeviceName()
 
-	s.startConnection()
+	err = s.startConnection()
+	if err != nil {
+		return s, err
+	}
+
 	loginPacket := s.getLoginBlobPacket(d.LoginBlob())
 	return s, s.doLogin(loginPacket, d.LoginBlob().Username)
 }
@@ -180,11 +189,44 @@ func (s *Session) doConnect() error {
 	return err
 }
 
+func (s *Session) disconnect() {
+	if s.tcpCon != nil {
+		conn := s.tcpCon.(net.Conn)
+		err := conn.Close()
+		if err != nil {
+			log.Println("Failed to close tcp connection", err)
+		}
+		s.tcpCon = nil
+	}
+}
+
 func (s *Session) doReconnect() error {
-	s.startConnection()
+	s.disconnect()
+
+	err := s.doConnect()
+	if err != nil {
+		return err
+	}
+
+	err = s.startConnection()
+	if err != nil {
+		return err
+	}
+
 	packet := makeLoginBlobPacket(s.username, s.reusableAuthBlob,
 		Spotify.AuthenticationType_AUTHENTICATION_STORED_SPOTIFY_CREDENTIALS.Enum(), s.deviceId)
 	return s.doLogin(packet, s.username)
+}
+
+func (s *Session) planReconnect() {
+	go func () {
+		time.Sleep(1 * time.Second)
+
+		if err := s.doReconnect(); err != nil {
+			// Try to reconnect again in a second
+			s.planReconnect()
+		}
+	}()
 }
 
 func (s *Session) runPollLoop() {
@@ -195,11 +237,12 @@ func (s *Session) runPollLoop() {
 
 			if err == io.EOF {
 				// We've been disconnected, reconnect
-				s.doReconnect()
+				s.planReconnect()
+				break
 			}
+		} else {
+			s.handle(cmd, data)
 		}
-
-		s.handle(cmd, data)
 	}
 }
 

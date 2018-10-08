@@ -17,7 +17,11 @@ var BuildID = "dev"
 
 // Login to Spotify using username and password
 func Login(username string, password string, deviceName string) (*Session, error) {
-	s := setupSession()
+	s, err := setupSession()
+	if err != nil {
+		return s, err
+	}
+
 	return s, s.loginSession(username, password, deviceName)
 }
 
@@ -25,18 +29,28 @@ func (s *Session) loginSession(username string, password string, deviceName stri
 	s.deviceId = utils.GenerateDeviceId(deviceName)
 	s.deviceName = deviceName
 
-	s.startConnection()
+	err := s.startConnection()
+	if err != nil {
+		return err
+	}
 	loginPacket := makeLoginPasswordPacket(username, password, s.deviceId)
 	return s.doLogin(loginPacket, username)
 }
 
 // Login to Spotify using an existing authData blob
 func LoginSaved(username string, authData []byte, deviceName string) (*Session, error) {
-	s := setupSession()
+	s, err := setupSession()
+	if err != nil {
+		return s, err
+	}
 	s.deviceId = utils.GenerateDeviceId(deviceName)
 	s.deviceName = deviceName
 
-	s.startConnection()
+	err = s.startConnection()
+	if err != nil {
+		return s, err
+	}
+
 	packet := makeLoginBlobPacket(username, authData,
 		Spotify.AuthenticationType_AUTHENTICATION_STORED_SPOTIFY_CREDENTIALS.Enum(), s.deviceId)
 	return s, s.doLogin(packet, username)
@@ -77,11 +91,18 @@ func LoginOAuth(deviceName string, clientId string, clientSecret string) (*Sessi
 }
 
 func loginOAuthToken(accessToken string, deviceName string) (*Session, error) {
-	s := setupSession()
+	s, err := setupSession()
+	if err != nil {
+		return s, err
+	}
+
 	s.deviceId = utils.GenerateDeviceId(deviceName)
 	s.deviceName = deviceName
 
-	s.startConnection()
+	err = s.startConnection()
+	if err != nil {
+		return s, err
+	}
 
 	packet := makeLoginBlobPacket("", []byte(accessToken),
 		Spotify.AuthenticationType_AUTHENTICATION_SPOTIFY_TOKEN.Enum(), s.deviceId)
