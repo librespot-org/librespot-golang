@@ -89,7 +89,7 @@ func (a *AudioFile) Read(buf []byte) (int, error) {
 	chunkIdx := a.chunkIndexAtByte(a.cursor)
 
 	for totalWritten < length {
-		fmt.Printf("[audiofile] Cursor: %d, len: %d, matching chunk %d\n", a.cursor, length, chunkIdx)
+		// fmt.Printf("[audiofile] Cursor: %d, len: %d, matching chunk %d\n", a.cursor, length, chunkIdx)
 
 		if chunkIdx >= a.totalChunks() {
 			// We've reached the last chunk, so we can signal EOF
