@@ -18,8 +18,8 @@ func createMobilePlayer(session *core.Session) *MobilePlayer {
 }
 
 func (p *MobilePlayer) LoadTrack(fileId []byte, format int, trackId []byte) (*MobileAudioFile, error) {
-	// Make a copy of the fileId and tracKid byte arrays, as they may be freed/reused on the other end,
-	// causing the fileId and/or trackId to change abruptly when the play actually request chunks.
+	// Make a copy of the fileId and trackId byte arrays, as they may be freed/reused on the other end,
+	// causing the fileId and/or trackId to change abruptly when the player actually request chunks.
 	safeFileId := make([]byte, len(fileId))
 	safeTrackId := make([]byte, len(trackId))
 	copy(safeFileId, fileId)

@@ -86,30 +86,47 @@ func (a *AudioFile) Read(buf []byte) (int, error) {
 	// don't have the entire data required for len(buf) (because it overlaps two or more chunks, and only the first
 	// one is available), we can still return the data already available, we don't need to wait to fill the entire
 	// buffer.
-	startChunk := a.chunkIndexAtByte(a.cursor)
-	endChunk := a.chunkIndexAtByte(a.cursor + length)
-	hasChunks := true
+	chunkIdx := a.chunkIndexAtByte(a.cursor)
 
-	for i := startChunk; i <= endChunk; i++ {
-		if i >= a.totalChunks() {
+	for totalWritten < length {
+		fmt.Printf("[audiofile] Cursor: %d, len: %d, matching chunk %d\n", a.cursor, length, chunkIdx)
+
+		if chunkIdx >= a.totalChunks() {
 			// We've reached the last chunk, so we can signal EOF
 			eof = true
 			break
-		} else if !a.hasChunk(i) {
+		} else if !a.hasChunk(chunkIdx) {
 			// A chunk we are looking to read is unavailable, request it so that we can return it on the next Read call
-			a.requestChunk(i)
-			hasChunks = false
-		} else if hasChunks {
-			// As long as we have contiguous chunks, write them to the output buffer
+			a.requestChunk(chunkIdx)
+			// fmt.Printf("[audiofile] Doesn't have chunk %d yet, queuing\n", chunkIdx)
+			break
+		} else {
+			// cursorEnd is the ending position in the output buffer. It is either the current outBufCursor + the size
+			// of a chunk, in bytes, or the length of the buffer, whichever is smallest.
 			cursorEnd := min(outBufCursor+kChunkByteSize, length)
 			writtenLen := cursorEnd - outBufCursor
 
-			dataCursorEnd := min(a.cursor+writtenLen, int(a.size))
+			// Calculate where our data cursor will end: either at the boundary of the current chunk, or the end
+			// of the song itself
+			dataCursorEnd := min(a.cursor+writtenLen, (chunkIdx + 1) * kChunkByteSize)
+			dataCursorEnd = min(dataCursorEnd, int(a.size))
+
 			writtenLen = dataCursorEnd - a.cursor
 
-			outBufCursor += copy(buf[outBufCursor:cursorEnd], a.data[a.cursor:dataCursorEnd])
+			if writtenLen <= 0 {
+				// No more space in the output buffer, bail out
+				break
+			}
+
+			// Copy into the output buffer, from the current outBufCursor, up to the cursorEnd. The source is the
+			// current cursor inside the audio file, up to the dataCursorEnd.
+			copy(buf[outBufCursor:cursorEnd], a.data[a.cursor:dataCursorEnd])
+			outBufCursor += writtenLen
 			a.cursor += writtenLen
 			totalWritten += writtenLen
+
+			// Update our current chunk, if we need to
+			chunkIdx = a.chunkIndexAtByte(a.cursor)
 		}
 	}
 
