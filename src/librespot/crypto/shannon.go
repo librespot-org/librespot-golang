@@ -3,9 +3,9 @@ package crypto
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"io"
 	"librespot/connection"
-	"log"
 	"sync"
 )
 
@@ -111,7 +111,7 @@ func (s *shannonStream) FinishSend() (err error) {
 	return
 }
 
-func (s *shannonStream) finishRecv() {
+func (s *shannonStream) finishRecv() error {
 	count := 4
 
 	mac := make([]byte, count)
@@ -121,13 +121,14 @@ func (s *shannonStream) finishRecv() {
 	shn_finish(&s.recvCipher, mac2, count)
 
 	if !bytes.Equal(mac, mac2) {
-		log.Println("received mac doesn't match")
+		return errors.New("received mac doesn't match")
 	}
 
 	s.recvNonce += 1
 	nonce := make([]uint8, 4)
 	binary.BigEndian.PutUint32(nonce, s.recvNonce)
 	shn_nonce(&s.recvCipher, nonce, len(nonce))
+	return nil
 }
 
 func (s *shannonStream) RecvPacket() (cmd uint8, buf []byte, err error) {
@@ -151,7 +152,7 @@ func (s *shannonStream) RecvPacket() (cmd uint8, buf []byte, err error) {
 		buf = s.Decrypt(buf)
 
 	}
-	s.finishRecv()
+	err = s.finishRecv()
 
 	return cmd, buf, err
 }
