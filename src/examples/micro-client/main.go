@@ -1,16 +1,16 @@
 package main
 
 import (
-	"Spotify"
+	"github.com/librespot-org/librespot-golang/src/Spotify"
 	"bufio"
 	"flag"
 	"fmt"
 	"github.com/xlab/portaudio-go/portaudio"
 	"github.com/xlab/vorbis-go/decoder"
 	"io/ioutil"
-	"librespot"
-	"librespot/core"
-	"librespot/utils"
+	"github.com/librespot-org/librespot-golang/src/librespot"
+	"github.com/librespot-org/librespot-golang/src/librespot/core"
+	"github.com/librespot-org/librespot-golang/src/librespot/utils"
 	"log"
 	"os"
 	"strings"

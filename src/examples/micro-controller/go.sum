@@ -1,0 +1,14 @@
+github.com/badfortrains/mdns v0.0.0-20160325001438-447166384f51 h1:b6+GdpGhuzxPETrVLwY77iq0L/BqLpcPRmaLNW+SoRY=
+github.com/badfortrains/mdns v0.0.0-20160325001438-447166384f51/go.mod h1:qHRkxMBkkpAWD2poeBYQt6O5IS4dE6w1Cr4Z8Q3feXI=
+github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/golang/protobuf v0.0.0-20171113180720-1e59b77b52bf h1:pFr/u+m8QUBMW/itAczltF3guNRAL7XDs5tD3f6nSD0=
+github.com/golang/protobuf v0.0.0-20171113180720-1e59b77b52bf/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
+github.com/miekg/dns v1.0.1 h1:6gt2fR2lfjPZ/wsZZZFEDcJLNW5eZwy1zUDIkyqxDsA=
+github.com/miekg/dns v1.0.1/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
+github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
+github.com/stretchr/testify v1.2.1/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
+golang.org/x/crypto v0.0.0-20171219041129-d585fd2cc919 h1:qFAJ1NcSrOkLdaMbN6OmWeqHdp0aFZy7uWOdL/5ddnU=
+golang.org/x/crypto v0.0.0-20171219041129-d585fd2cc919/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
+golang.org/x/net v0.0.0-20171212005608-d866cfc389ce h1:4g3VPcb++AP2cNa6CQ0iACUoH7J/3Jxojq0mmJun9A4=
+golang.org/x/net v0.0.0-20171212005608-d866cfc389ce/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+golang.org/x/sync v0.0.0-20181108010431-42b317875d0f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=

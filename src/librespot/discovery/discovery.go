@@ -14,8 +14,8 @@ import (
 	"strings"
 	"sync"
 
-	"librespot/crypto"
-	"librespot/utils"
+	"github.com/librespot-org/librespot-golang/src/librespot/crypto"
+	"github.com/librespot-org/librespot-golang/src/librespot/utils"
 	"net"
 )
 

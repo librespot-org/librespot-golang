@@ -1,0 +1,4 @@
+github.com/golang/protobuf v0.0.0-20171113180720-1e59b77b52bf h1:pFr/u+m8QUBMW/itAczltF3guNRAL7XDs5tD3f6nSD0=
+github.com/golang/protobuf v0.0.0-20171113180720-1e59b77b52bf/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
+github.com/librespot-org/librespot-golang v0.0.0-20181112205641-23bdf13d9bf3 h1:xb+iOLSUtPYwoYDTFdszji9jZ9eGqCbbAmUmN3hRcL0=
+github.com/librespot-org/librespot-golang v0.0.0-20181112205641-23bdf13d9bf3/go.mod h1:p+7XDsra6SFt+S0NW5mwMxRGHUl0vP6/nMWlmxRTKzs=

@@ -1,12 +1,12 @@
 package player
 
 import (
-	"Spotify"
+	"github.com/librespot-org/librespot-golang/src/Spotify"
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"librespot/connection"
-	"librespot/mercury"
+	"github.com/librespot-org/librespot-golang/src/librespot/connection"
+	"github.com/librespot-org/librespot-golang/src/librespot/mercury"
 	"log"
 	"sync"
 )

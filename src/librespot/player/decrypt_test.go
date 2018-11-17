@@ -1,7 +1,7 @@
 package player_test
 
 import (
-	"librespot/player"
+	"github.com/librespot-org/librespot-golang/src/librespot/player"
 	"testing"
 )
 
