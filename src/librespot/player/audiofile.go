@@ -40,6 +40,7 @@ type AudioFile struct {
 	cursor         int
 	chunks         map[int]bool
 	chunksLoading  bool
+	cancelled      bool
 }
 
 func newAudioFile(file *Spotify.AudioFile, player *Player) *AudioFile {
@@ -153,6 +154,11 @@ func (a *AudioFile) Seek(offset int64, whence int) (int64, error) {
 	}
 
 	return int64(a.cursor - a.headerOffset()), nil
+}
+
+// Cancels the current audio file - no further data will be downloaded
+func (a *AudioFile) Cancel() {
+	a.cancelled = true
 }
 
 func (a *AudioFile) headerOffset() int {
@@ -275,6 +281,10 @@ func (a *AudioFile) loadChunk(chunkIndex int) error {
 }
 
 func (a *AudioFile) loadNextChunk() {
+	if a.cancelled {
+		return
+	}
+
 	a.chunkLock.Lock()
 
 	if a.chunksLoading {
