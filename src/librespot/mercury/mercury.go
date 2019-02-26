@@ -48,6 +48,7 @@ type Client struct {
 	subscriptions map[string][]chan Response
 	callbacks     map[string]Callback
 	internal      *Internal
+	cbMu          sync.Mutex
 }
 
 type Connection interface {
@@ -113,7 +114,10 @@ func (m *Client) Request(req Request, cb Callback) (err error) {
 		return err
 	}
 
+	m.cbMu.Lock()
 	m.callbacks[string(seq)] = cb
+	m.cbMu.Unlock()
+
 	return nil
 }
 
@@ -264,9 +268,14 @@ func (m *Client) Handle(cmd uint8, reader io.Reader) (err error) {
 					ch <- *response
 				}
 			}
-		} else if cb, ok := m.callbacks[response.SeqKey]; ok {
-			delete(m.callbacks, response.SeqKey)
-			cb(*response)
+		} else {
+			m.cbMu.Lock()
+			cb, ok := m.callbacks[response.SeqKey]
+			delete(m.callbacks, response.SeqKey) // no-op if element does not exist
+			m.cbMu.Unlock()
+			if ok {
+				cb(*response)
+			}
 		}
 	}
 	return

@@ -28,6 +28,7 @@ func min(a, b int) int {
 // AudioFile represents a downloadable/cached audio file fetched by Spotify, in an encoded format (OGG, etc)
 type AudioFile struct {
 	size           uint32
+	lock           sync.RWMutex
 	format         Spotify.AudioFile_Format
 	fileId         []byte
 	player         *Player
@@ -74,10 +75,13 @@ func (a *AudioFile) Read(buf []byte) (int, error) {
 	totalWritten := 0
 	eof := false
 
+	a.lock.RLock()
+	size := a.size
+	a.lock.RUnlock()
 	// Offset the data start by the header, if needed
 	if a.cursor == 0 {
 		a.cursor += a.headerOffset()
-	} else if uint32(a.cursor) >= a.size {
+	} else if uint32(a.cursor) >= size {
 		// We're at the end
 		return 0, io.EOF
 	}
@@ -198,7 +202,10 @@ func (a *AudioFile) loadKey(trackId []byte) error {
 }
 
 func (a *AudioFile) totalChunks() int {
-	return int(math.Ceil(float64(a.size) / float64(kChunkSize) / 4.0))
+	a.lock.RLock()
+	size := a.size
+	a.lock.RUnlock()
+	return int(math.Ceil(float64(size) / float64(kChunkSize) / 4.0))
 }
 
 func (a *AudioFile) loadChunks() {
@@ -323,7 +330,9 @@ func (a *AudioFile) onChannelHeader(channel *Channel, id byte, data *bytes.Reade
 		// fmt.Printf("[AudioFile] Audio file size: %d bytes\n", size)
 
 		if a.size != size {
+			a.lock.Lock()
 			a.size = size
+			a.lock.Unlock()
 			if a.data == nil {
 				a.data = make([]byte, size)
 			}
