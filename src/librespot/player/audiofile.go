@@ -1,14 +1,14 @@
 package player
 
 import (
-	"Spotify"
+	"github.com/diamondburned/librespot-golang/Spotify"
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/binary"
 	"fmt"
 	"io"
-	"librespot/connection"
+	"github.com/diamondburned/librespot-golang/librespot/connection"
 	"math"
 	"sync"
 )

@@ -1,7 +1,7 @@
 package librespot
 
 import (
-	"librespot/core"
+	core "github.com/diamondburned/librespot-golang/librespot/core"
 )
 
 // Login to Spotify using username and password

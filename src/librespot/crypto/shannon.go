@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
-	"librespot/connection"
+	"github.com/diamondburned/librespot-golang/librespot/connection"
 	"log"
 	"sync"
 )

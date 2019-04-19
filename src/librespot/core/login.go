@@ -1,14 +1,14 @@
 package core
 
 import (
-	"Spotify"
+	"github.com/diamondburned/librespot-golang/Spotify"
 	"bytes"
 	"encoding/base64"
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"librespot/connection"
-	"librespot/discovery"
-	"librespot/utils"
+	"github.com/diamondburned/librespot-golang/librespot/connection"
+	"github.com/diamondburned/librespot-golang/librespot/discovery"
+	"github.com/diamondburned/librespot-golang/librespot/utils"
 	"log"
 )
 

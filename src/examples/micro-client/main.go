@@ -1,21 +1,22 @@
 package main
 
 import (
-	"Spotify"
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/xlab/portaudio-go/portaudio"
-	"github.com/xlab/vorbis-go/decoder"
 	"io/ioutil"
-	"librespot"
-	"librespot/core"
-	"librespot/utils"
 	"log"
 	"os"
 	"strings"
 	"sync"
 	"unsafe"
+
+	"github.com/diamondburned/librespot-golang/Spotify"
+	"github.com/diamondburned/librespot-golang/librespot"
+	"github.com/diamondburned/librespot-golang/librespot/core"
+	"github.com/diamondburned/librespot-golang/librespot/utils"
+	"github.com/xlab/portaudio-go/portaudio"
+	"github.com/xlab/vorbis-go/decoder"
 )
 
 const (
