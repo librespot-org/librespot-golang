@@ -10,6 +10,7 @@ for the defunct libspotify.
 This is still highly experimental and in development. Do not use it in production projects yet, as the API is incomplete
 and subject to heavy changes.
 
+This fork contains changes that are more compatible with go.mod, while removing the Rust-esque package layout.
 ### Installation
 
 This package can be installed using:
