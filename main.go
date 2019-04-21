@@ -11,23 +11,23 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/diamondburned/librespot-golang/Spotify"
-	"github.com/diamondburned/librespot-golang/librespot"
-	"github.com/diamondburned/librespot-golang/librespot/core"
-	"github.com/diamondburned/librespot-golang/librespot/utils"
+	"github.com/librespot-org/librespot-golang/Spotify"
+	"github.com/librespot-org/librespot-golang/librespot"
+	"github.com/librespot-org/librespot-golang/librespot/core"
+	"github.com/librespot-org/librespot-golang/librespot/utils"
 	"github.com/xlab/portaudio-go/portaudio"
 	"github.com/xlab/vorbis-go/decoder"
 )
 
 const (
 	// The device name that is registered to Spotify servers
-	kDefaultDeviceName = "librespot"
+	defaultDeviceName = "librespot"
 	// The number of samples per channel in the decoded audio
-	kSamplesPerChannel = 2048
+	samplesPerChannel = 2048
 	// The samples bit depth
-	kBitDepth = 16
+	bitDepth = 16
 	// The samples format
-	kSampleFormat = portaudio.PaFloat32
+	sampleFormat = portaudio.PaFloat32
 )
 
 func main() {
@@ -40,7 +40,7 @@ func main() {
 	username := flag.String("username", "", "spotify username")
 	password := flag.String("password", "", "spotify password")
 	blob := flag.String("blob", "blob.bin", "spotify auth blob")
-	devicename := flag.String("devicename", kDefaultDeviceName, "name of device")
+	devicename := flag.String("devicename", defaultDeviceName, "name of device")
 	flag.Parse()
 
 	// Authenticate
@@ -149,10 +149,10 @@ func printHelp() {
 	fmt.Println("help:                           show this help")
 }
 
-func funcTrack(session *core.Session, trackId string) {
-	fmt.Println("Loading track: ", trackId)
+func funcTrack(session *core.Session, trackID string) {
+	fmt.Println("Loading track: ", trackID)
 
-	track, err := session.Mercury().GetTrack(utils.Base62ToHex(trackId))
+	track, err := session.Mercury().GetTrack(utils.Base62ToHex(trackID))
 	if err != nil {
 		fmt.Println("Error loading track: ", err)
 		return
@@ -161,8 +161,8 @@ func funcTrack(session *core.Session, trackId string) {
 	fmt.Println("Track title: ", track.GetName())
 }
 
-func funcArtist(session *core.Session, artistId string) {
-	artist, err := session.Mercury().GetArtist(utils.Base62ToHex(artistId))
+func funcArtist(session *core.Session, artistID string) {
+	artist, err := session.Mercury().GetArtist(utils.Base62ToHex(artistID))
 	if err != nil {
 		fmt.Println("Error loading artist:", err)
 		return
@@ -195,8 +195,8 @@ func funcArtist(session *core.Session, artistId string) {
 
 }
 
-func funcAlbum(session *core.Session, albumId string) {
-	album, err := session.Mercury().GetAlbum(utils.Base62ToHex(albumId))
+func funcAlbum(session *core.Session, albumID string) {
+	album, err := session.Mercury().GetAlbum(utils.Base62ToHex(albumID))
 	if err != nil {
 		fmt.Println("Error loading album:", err)
 		return
@@ -287,11 +287,11 @@ func funcSearch(session *core.Session, keyword string) {
 	}
 }
 
-func funcPlay(session *core.Session, trackId string) {
-	fmt.Println("Loading track for play: ", trackId)
+func funcPlay(session *core.Session, trackID string) {
+	fmt.Println("Loading track for play: ", trackID)
 
 	// Get the track metadata: it holds information about which files and encodings are available
-	track, err := session.Mercury().GetTrack(utils.Base62ToHex(trackId))
+	track, err := session.Mercury().GetTrack(utils.Base62ToHex(trackID))
 	if err != nil {
 		fmt.Println("Error loading track: ", err)
 		return
@@ -320,7 +320,7 @@ func funcPlay(session *core.Session, trackId string) {
 		// Note that we skip the first 167 bytes as it is a Spotify-specific header. You can decode it by
 		// using this: https://sourceforge.net/p/despotify/code/HEAD/tree/java/trunk/src/main/java/se/despotify/client/player/SpotifyOggHeader.java
 		fmt.Println("Setting up OGG decoder...")
-		dec, err := decoder.New(audioFile, kSamplesPerChannel)
+		dec, err := decoder.New(audioFile, samplesPerChannel)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -339,8 +339,8 @@ func funcPlay(session *core.Session, trackId string) {
 		var stream *portaudio.Stream
 		callback := paCallback(&wg, int(info.Channels), dec.SamplesOut())
 
-		if err := portaudio.OpenDefaultStream(&stream, 0, info.Channels, kSampleFormat, info.SampleRate,
-			kSamplesPerChannel, callback, nil); paError(err) {
+		if err := portaudio.OpenDefaultStream(&stream, 0, info.Channels, sampleFormat, info.SampleRate,
+			samplesPerChannel, callback, nil); paError(err) {
 			log.Fatalln(paErrorText(err))
 		}
 

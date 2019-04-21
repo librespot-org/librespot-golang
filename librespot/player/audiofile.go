@@ -1,14 +1,14 @@
 package player
 
 import (
-	"github.com/diamondburned/librespot-golang/Spotify"
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/binary"
 	"fmt"
+	"github.com/librespot-org/librespot-golang/Spotify"
+	"github.com/librespot-org/librespot-golang/librespot/connection"
 	"io"
-	"github.com/diamondburned/librespot-golang/librespot/connection"
 	"math"
 	"sync"
 )
@@ -112,7 +112,7 @@ func (a *AudioFile) Read(buf []byte) (int, error) {
 
 			// Calculate where our data cursor will end: either at the boundary of the current chunk, or the end
 			// of the song itself
-			dataCursorEnd := min(a.cursor+writtenLen, (chunkIdx + 1) * kChunkByteSize)
+			dataCursorEnd := min(a.cursor+writtenLen, (chunkIdx+1)*kChunkByteSize)
 			dataCursorEnd = min(dataCursorEnd, int(a.size))
 
 			writtenLen = dataCursorEnd - a.cursor

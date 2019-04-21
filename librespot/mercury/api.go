@@ -1,11 +1,11 @@
 package mercury
 
 import (
-	"github.com/diamondburned/librespot-golang/Spotify"
 	"encoding/json"
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"github.com/diamondburned/librespot-golang/librespot/metadata"
+	"github.com/librespot-org/librespot-golang/Spotify"
+	"github.com/librespot-org/librespot-golang/librespot/metadata"
 	"net/url"
 )
 

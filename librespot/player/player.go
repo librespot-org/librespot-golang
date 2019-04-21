@@ -1,12 +1,12 @@
 package player
 
 import (
-	"github.com/diamondburned/librespot-golang/Spotify"
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/diamondburned/librespot-golang/librespot/connection"
-	"github.com/diamondburned/librespot-golang/librespot/mercury"
+	"github.com/librespot-org/librespot-golang/Spotify"
+	"github.com/librespot-org/librespot-golang/librespot/connection"
+	"github.com/librespot-org/librespot-golang/librespot/mercury"
 	"log"
 	"sync"
 )
@@ -17,11 +17,11 @@ type Player struct {
 	seq      uint32
 	audioKey []byte
 
-	chanLock sync.Mutex
+	chanLock    sync.Mutex
 	seqChanLock sync.Mutex
-	channels map[uint16]*Channel
-	seqChans sync.Map
-	nextChan uint16
+	channels    map[uint16]*Channel
+	seqChans    sync.Map
+	nextChan    uint16
 }
 
 func CreatePlayer(conn connection.PacketStream, client *mercury.Client) *Player {

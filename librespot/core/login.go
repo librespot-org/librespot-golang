@@ -1,14 +1,14 @@
 package core
 
 import (
-	"github.com/diamondburned/librespot-golang/Spotify"
 	"bytes"
 	"encoding/base64"
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"github.com/diamondburned/librespot-golang/librespot/connection"
-	"github.com/diamondburned/librespot-golang/librespot/discovery"
-	"github.com/diamondburned/librespot-golang/librespot/utils"
+	"github.com/librespot-org/librespot-golang/Spotify"
+	"github.com/librespot-org/librespot-golang/librespot/connection"
+	"github.com/librespot-org/librespot-golang/librespot/discovery"
+	"github.com/librespot-org/librespot-golang/librespot/utils"
 	"log"
 )
 
@@ -189,8 +189,8 @@ func makeLoginBlobPacket(username string, authData []byte,
 			AuthData: authData,
 		},
 		SystemInfo: &Spotify.SystemInfo{
-			CpuFamily: Spotify.CpuFamily_CPU_UNKNOWN.Enum(),
-			Os:        Spotify.Os_OS_UNKNOWN.Enum(),
+			CpuFamily:               Spotify.CpuFamily_CPU_UNKNOWN.Enum(),
+			Os:                      Spotify.Os_OS_UNKNOWN.Enum(),
 			SystemInformationString: proto.String("librespot-golang"),
 			DeviceId:                proto.String(deviceId),
 		},

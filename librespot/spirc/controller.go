@@ -1,13 +1,13 @@
 package spirc
 
 import (
-	"github.com/diamondburned/librespot-golang/Spotify"
 	"errors"
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"github.com/diamondburned/librespot-golang/librespot/core"
-	"github.com/diamondburned/librespot-golang/librespot/mercury"
-	"github.com/diamondburned/librespot-golang/librespot/utils"
+	"github.com/librespot-org/librespot-golang/Spotify"
+	"github.com/librespot-org/librespot-golang/librespot/core"
+	"github.com/librespot-org/librespot-golang/librespot/mercury"
+	"github.com/librespot-org/librespot-golang/librespot/utils"
 	"strings"
 	"sync"
 )

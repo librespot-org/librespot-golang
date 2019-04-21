@@ -1,20 +1,21 @@
 package core
 
 import (
-	"github.com/diamondburned/librespot-golang/Spotify"
 	"bytes"
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"io"
-	"github.com/diamondburned/librespot-golang/librespot/connection"
-	"github.com/diamondburned/librespot-golang/librespot/crypto"
-	"github.com/diamondburned/librespot-golang/librespot/discovery"
-	"github.com/diamondburned/librespot-golang/librespot/mercury"
-	"github.com/diamondburned/librespot-golang/librespot/player"
-	"github.com/diamondburned/librespot-golang/librespot/utils"
 	"log"
 	"net"
 	"time"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/librespot-org/librespot-golang/Spotify"
+	"github.com/librespot-org/librespot-golang/librespot/connection"
+	"github.com/librespot-org/librespot-golang/librespot/crypto"
+	"github.com/librespot-org/librespot-golang/librespot/discovery"
+	"github.com/librespot-org/librespot-golang/librespot/mercury"
+	"github.com/librespot-org/librespot-golang/librespot/player"
+	"github.com/librespot-org/librespot-golang/librespot/utils"
 )
 
 // Session represents an active Spotify connection
@@ -219,7 +220,7 @@ func (s *Session) doReconnect() error {
 }
 
 func (s *Session) planReconnect() {
-	go func () {
+	go func() {
 		time.Sleep(1 * time.Second)
 
 		if err := s.doReconnect(); err != nil {

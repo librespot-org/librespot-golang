@@ -1,4 +1,4 @@
-module github.com/diamondburned/librespot-golang
+module github.com/librespot-org/librespot-golang
 
 require (
 	github.com/badfortrains/mdns v0.0.0-20160325001438-447166384f51

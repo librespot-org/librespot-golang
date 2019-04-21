@@ -149,10 +149,10 @@ var Op_Kind_name = map[int32]string{
 	6: "UPDATE_LIST_ATTRIBUTES",
 }
 var Op_Kind_value = map[string]int32{
-	"KIND_UNKNOWN": 0,
-	"ADD":          2,
-	"REM":          3,
-	"MOV":          4,
+	"KIND_UNKNOWN":           0,
+	"ADD":                    2,
+	"REM":                    3,
+	"MOV":                    4,
 	"UPDATE_ITEM_ATTRIBUTES": 5,
 	"UPDATE_LIST_ATTRIBUTES": 6,
 }
