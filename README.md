@@ -18,7 +18,11 @@ go get github.com/librespot-org/librespot-golang/librespot
 
 ### Usage
 
-To use the package look at the example micro-controller (for Spotify Connect), or micro-client (for audio playback).
+To use the package look at the example micro-controller (for Spotify Connect). For the CLI, install the main package:
+
+```sh
+go get -u github.com/librespot-org/librespot-golang
+```
 
 ### Building for mobile
 
@@ -37,7 +41,7 @@ This will build you a file called `librespotmobile.aar` which you can include in
 ### Compiling on nix:
 
 ```sh
-nix-shell -p gcc pkgconfig libvorbislibogg portaudio
+nix-shell -p gcc pkgconfig libvorbis libogg portaudio
 ```
 
 ### To-Do's
