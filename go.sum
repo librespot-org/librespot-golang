@@ -1,9 +1,13 @@
 github.com/badfortrains/mdns v0.0.0-20160325001438-447166384f51 h1:b6+GdpGhuzxPETrVLwY77iq0L/BqLpcPRmaLNW+SoRY=
 github.com/badfortrains/mdns v0.0.0-20160325001438-447166384f51/go.mod h1:qHRkxMBkkpAWD2poeBYQt6O5IS4dE6w1Cr4Z8Q3feXI=
+github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/golang/protobuf v1.3.1 h1:YF8+flBXS5eO826T4nzqPrxfhQThhXl0YzfuUPu4SBg=
 github.com/golang/protobuf v1.3.1/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/miekg/dns v1.1.8 h1:1QYRAKU3lN5cRfLCkPU08hwvLJFhvjP6MqNMmQz6ZVI=
 github.com/miekg/dns v1.1.8/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
+github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
+github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
+github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/xlab/portaudio-go v0.0.0-20170905165025-132d041879db h1:sSIQlvfIWUHLDhEWUL2K2CeYv9CDksC00VxuxPUe4lw=
 github.com/xlab/portaudio-go v0.0.0-20170905165025-132d041879db/go.mod h1:r57mRacDQMS6Fz8ubv1nE8zZ0DbQ/sY0NkCmdxeUXmY=
 github.com/xlab/vorbis-go v0.0.0-20190125051917-087364aef51d h1:WXSpRkRlV+KXRqO0UL6ScsRUnvApBAjp0MdggYrgZZ0=
