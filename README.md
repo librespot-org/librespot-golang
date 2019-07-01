@@ -1,3 +1,4 @@
+[![Documentation](https://godoc.org/github.com/librespot-org/librespot-golang/librespot?status.svg)](https://godoc.org/github.com/librespot-org/librespot-golang/librespot)
 ## librespot-golang
 
 ### Introduction
