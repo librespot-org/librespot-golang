@@ -3,10 +3,11 @@ package mercury
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/librespot-org/librespot-golang/Spotify"
 	"github.com/librespot-org/librespot-golang/librespot/metadata"
-	"net/url"
 )
 
 func (m *Client) mercuryGet(url string) []byte {
@@ -103,6 +104,20 @@ func (m *Client) GetArtist(id string) (*Spotify.Artist, error) {
 func (m *Client) GetAlbum(id string) (*Spotify.Album, error) {
 	uri := "hm://metadata/4/album/" + id
 	result := &Spotify.Album{}
+	err := m.mercuryGetProto(uri, result)
+	return result, err
+}
+
+func (m *Client) GetEpisode(id string) (*Spotify.Episode, error) {
+	uri := "hm://metadata/3/episode/" + id
+	result := &Spotify.Episode{}
+	err := m.mercuryGetProto(uri, result)
+	return result, err
+}
+
+func (m *Client) GetShow(id string) (*Spotify.Show, error) {
+	uri := "hm://metadata/3/show/" + id
+	result := &Spotify.Show{}
 	err := m.mercuryGetProto(uri, result)
 	return result, err
 }
