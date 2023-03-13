@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"log"
+	"sync"
+
 	"github.com/librespot-org/librespot-golang/Spotify"
 	"github.com/librespot-org/librespot-golang/librespot/connection"
 	"github.com/librespot-org/librespot-golang/librespot/mercury"
-	"log"
-	"sync"
 )
 
 type Player struct {
@@ -111,7 +112,10 @@ func (p *Player) HandleCmd(cmd byte, data []byte) {
 
 		// fmt.Printf("[player] Data on channel %d: %d bytes\n", channel, len(data[2:]))
 
-		if val, ok := p.channels[channel]; ok {
+		p.chanLock.Lock()
+		val, ok := p.channels[channel]
+		p.chanLock.Unlock()
+		if ok {
 			val.handlePacket(data[2:])
 		} else {
 			fmt.Printf("Unknown channel!\n")
