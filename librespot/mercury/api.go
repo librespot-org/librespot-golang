@@ -47,7 +47,8 @@ func (m *Client) GetRootPlaylist(username string) (*Spotify.SelectedListContent,
 }
 
 func (m *Client) GetPlaylist(id string) (*Spotify.SelectedListContent, error) {
-	uri := fmt.Sprintf("hm://playlist/%s", id)
+// 	uri := fmt.Sprintf("hm://playlist/%s", id) // old non-functional endpoint
+	uri := fmt.Sprintf("hm://playlist/v2/playlist/%s", id)
 
 	result := &Spotify.SelectedListContent{}
 	err := m.mercuryGetProto(uri, result)
